@@ -32,6 +32,17 @@ All timestamps are stored in UTC at the database/API layer and displayed in the 
 | `alert_links` | Linked project and relation | Peer, potential-duplicate, or vendor-cohort relationships. |
 | `reviewer_actions` | Reviewer, disposition, note, timestamp | Append-only human-review history retained with the case. |
 
+## Official allocation-context model
+
+| Entity | Key fields | Purpose |
+|---|---|---|
+| `official_allocation_imports` | Source URL, source scope, managed asset URL, SHA-256, retrieval timestamp, row count | Preserves the official public CSV source and identifies its exact scope. |
+| `official_allocation_records` | State, MP name, constituency, allocated amount, source row | Stores the public export at its native MP-allocation grain. |
+| `allocation_model_runs` | Code/version, source import, training rows, method, configuration, evaluation, status | Captures a reproducible trained context-model run. |
+| `allocation_model_scores` | Band, score, direction, state/national median, peer count, applied variance | Preserves the peer-context calculation for each public allocation record. |
+
+The allocation-context model uses an in-state median where there are at least five public records; otherwise it uses the national median. It assigns a context score equal to the absolute percentage difference from the applied baseline. Scores describe variation only and are not fraud probabilities or allegations.
+
 ## Detector input expectations
 
 | Detector | Required project fields | Key decision rule |

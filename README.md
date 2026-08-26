@@ -16,12 +16,13 @@ MPLAD Guardian is an **evidence-first audit-intelligence platform** for prioriti
 | Provenance | Audit-run code, algorithm version, source digest, preserved evidence rows, CSV checksum, and storage reference. |
 | Human review | Field-verification, dismiss, and resolve actions with retained notes and timestamps. |
 | Analyst experience | Responsive command centre, filterable queue, detailed case file, project register, and CSV preview/validation/import flow. |
+| Official allocation context | A versioned, trained unsupervised peer-median model based on the [MPLADS e-SAKSHI public allocation export](https://mplads.mospi.gov.in/digigov/dashboard.html), with source checksum, record-level context, and explicit interpretation guardrails. |
 
 ## Architecture
 
 The application uses React 19, Tailwind CSS, tRPC, Express, Drizzle ORM, MySQL/TiDB, object storage, and Manus OAuth. Client screens use typed `trpc.*` hooks. The backend stores the audit foundation and calls deterministic, explainable detector functions; it does **not** use an opaque model to make determinations.
 
-The central domain is documented in [docs/architecture.md](docs/architecture.md). The detailed field definitions are in [docs/data-dictionary.md](docs/data-dictionary.md).
+The central domain is documented in [docs/architecture.md](docs/architecture.md). The detailed field definitions are in [docs/data-dictionary.md](docs/data-dictionary.md). The official-source assessment and model boundary are documented in [docs/training-data-assessment.md](docs/training-data-assessment.md).
 
 ## Local setup
 
@@ -53,7 +54,13 @@ pnpm test
 pnpm build
 ```
 
-The unit suite covers the four seeded detector patterns, data-quality evidence, CSV validation boundaries, reviewer action mapping, and the template authentication logout behavior.
+The unit suite covers the four seeded detector patterns, data-quality evidence, CSV validation boundaries, reviewer action mapping, risk aggregation, official-allocation parsing, and the peer-median model’s variance scoring.
+
+## Official allocation-context model
+
+The **Allocation context** workspace contains a persisted model run trained on 543 records from the public MPLADS allocation export retrieved on 26 August 2026. The model learns a median allocation baseline for each state with five or more records and falls back to the national median for smaller state groups. Its score is the absolute percentage difference from that peer baseline; the application retains the source URL, source checksum, model version, training-row count, method, evaluation summary, and every scored record.
+
+This model is intentionally **not** a fraud classifier. The public export contains allocation, state, MP, and constituency fields; it does not expose project-level costs, vendors, payment history, inspection outcomes, or verified fraud labels. High variance can have valid administrative explanations. The UI therefore calls results “context,” prevents fraud language, and directs analysts to seek documentary context rather than drawing conclusions.
 
 ## CSV import
 
@@ -81,6 +88,9 @@ sanctionDate,expectedCompletionDate,lastUpdateDate,progressPercent,status
 | `audit.review` | Authenticated reviewer | Record a review disposition and note. |
 | `imports.validate` | Public demo read | Validate parsed CSV project records. |
 | `imports.execute` | Administrator | Preserve CSV provenance and import validated project records. |
+| `allocation.dashboard` | Public context read | Versioned official source, model metadata, band counts, and allocation-context register. |
+| `allocation.case` | Public context read | One public allocation record, peer median comparison, state peer set, source, and model limitations. |
+| `allocation.retrain` | Administrator | Verify/reuse the preserved official source model in the current model scope. |
 
 ## Security and operating notes
 
@@ -99,3 +109,4 @@ Use the five-minute walkthrough in [docs/demo-narrative.md](docs/demo-narrative.
 | [Demo narrative](docs/demo-narrative.md) | Concise presentation script and expected evidence. |
 | [Accessibility](docs/accessibility.md) | Current accessibility implementation and final acceptance checklist. |
 | [Verification notes](docs/verification-notes.md) | Recorded desktop/mobile visual verification outcome. |
+| [Training-data assessment](docs/training-data-assessment.md) | Official data coverage, model boundary, and the requirements for future supervised training. |

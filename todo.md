@@ -17,3 +17,15 @@
 - [x] Write README, setup instructions, data dictionary, and five-minute demo narrative.
 - [x] Verify build, tests, database integration, and desktop/mobile dashboard presentation.
 - [x] Save a final project checkpoint and deliver the finished application.
+- [ ] Obtain approved historical project records with verified investigation or audit outcomes suitable for supervised training.
+- [ ] Define the model target, feature set, label policy, leakage controls, data splits, and evaluation thresholds.
+- [ ] Implement a reproducible model-training and evaluation pipeline with model-version provenance.
+- [ ] Integrate model inference, calibrated risk outputs, feature explanations, and performance reporting into the analyst workflow.
+- [ ] Validate the trained-model implementation, update documentation, save a new checkpoint, and deliver the extension.
+- [x] Profile the official MPLADS allocation export and document its fields, coverage, and modelling limitation.
+- [x] Add a versioned official-allocation data model and ingestion path with source URL, retrieved timestamp, checksum, and source scope.
+- [x] Train and persist a transparent unsupervised allocation-context anomaly model from the official public export.
+- [x] Add a model-context dashboard and allocation case view that explains peer statistics, anomaly features, and non-fraud limitations.
+- [x] Add training/evaluation tests and update operational documentation for the official-data model extension.
+- [x] Verify official source ingestion, persisted model provenance, scored records, responsive allocation views, tests, and production build.
+- [ ] Obtain verified project-level audit outcomes before building or claiming a supervised fraud-classification model.

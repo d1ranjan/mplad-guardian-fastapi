@@ -15,6 +15,13 @@
       "when": 1787762940247,
       "tag": "0001_next_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787765512198,
+      "tag": "0002_misty_hex",
+      "breakpoints": true
     }
   ]
 }

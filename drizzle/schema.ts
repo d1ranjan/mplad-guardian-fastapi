@@ -203,8 +203,80 @@ export const dataQualityIssues = mysqlTable(
   table => [index("data_quality_issues_project_idx").on(table.projectId), index("data_quality_issues_import_idx").on(table.dataImportId)],
 );
 
+export const officialAllocationImports = mysqlTable(
+  "official_allocation_imports",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sourceUrl: varchar("sourceUrl", { length: 1024 }).notNull(),
+    sourceScope: varchar("sourceScope", { length: 255 }).notNull(),
+    publicAssetUrl: varchar("publicAssetUrl", { length: 1024 }).notNull(),
+    sourceSha256: varchar("sourceSha256", { length: 96 }).notNull(),
+    retrievedAt: timestamp("retrievedAt").notNull(),
+    rowCount: int("rowCount").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [uniqueIndex("official_allocation_imports_sha_uq").on(table.sourceSha256)],
+);
+
+export const officialAllocationRecords = mysqlTable(
+  "official_allocation_records",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sourceImportId: int("sourceImportId").notNull().references(() => officialAllocationImports.id, { onDelete: "cascade" }),
+    sourceRowNumber: int("sourceRowNumber").notNull(),
+    state: varchar("state", { length: 128 }).notNull(),
+    mpName: varchar("mpName", { length: 255 }).notNull(),
+    constituency: varchar("constituency", { length: 255 }).notNull(),
+    allocatedAmount: double("allocatedAmount").notNull(),
+  },
+  table => [
+    uniqueIndex("official_allocation_record_source_row_uq").on(table.sourceImportId, table.sourceRowNumber),
+    index("official_allocation_records_state_idx").on(table.state),
+  ],
+);
+
+export const allocationModelRuns = mysqlTable(
+  "allocation_model_runs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    modelCode: varchar("modelCode", { length: 96 }).notNull(),
+    modelVersion: varchar("modelVersion", { length: 96 }).notNull(),
+    sourceImportId: int("sourceImportId").notNull().references(() => officialAllocationImports.id, { onDelete: "cascade" }),
+    trainingRows: int("trainingRows").notNull(),
+    methodology: text("methodology").notNull(),
+    configuration: json("configuration"),
+    evaluation: json("evaluation"),
+    status: mysqlEnum("status", ["training", "completed", "failed"]).notNull(),
+    trainedAt: timestamp("trainedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+  },
+  table => [uniqueIndex("allocation_model_runs_code_uq").on(table.modelCode), index("allocation_model_runs_status_idx").on(table.status)],
+);
+
+export const allocationModelScores = mysqlTable(
+  "allocation_model_scores",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    modelRunId: int("modelRunId").notNull().references(() => allocationModelRuns.id, { onDelete: "cascade" }),
+    allocationRecordId: int("allocationRecordId").notNull().references(() => officialAllocationRecords.id, { onDelete: "cascade" }),
+    contextBand: mysqlEnum("contextBand", ["high_variance", "moderate_variance", "expected_range"]).notNull(),
+    modelScore: int("modelScore").notNull(),
+    varianceDirection: mysqlEnum("varianceDirection", ["above_peer_median", "below_peer_median", "at_peer_median"]).notNull(),
+    statePeerCount: int("statePeerCount").notNull(),
+    statePeerMedian: double("statePeerMedian").notNull(),
+    nationalPeerMedian: double("nationalPeerMedian").notNull(),
+    appliedVariancePercent: double("appliedVariancePercent").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("allocation_model_scores_run_record_uq").on(table.modelRunId, table.allocationRecordId),
+    index("allocation_model_scores_run_idx").on(table.modelRunId, table.contextBand),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type Vendor = typeof vendors.$inferSelect;
 export type AuditAlert = typeof auditAlerts.$inferSelect;
+export type OfficialAllocationRecord = typeof officialAllocationRecords.$inferSelect;

@@ -7,3 +7,7 @@ The verified interface uses an institutional audit-intelligence direction: deep 
 Mobile verification completed successfully for the command centre, alert case, and import screen at a 390 × 844 viewport. The sidebar collapses out of the working canvas, case evidence moves into a single readable column, action buttons remain reachable, and the import controls reflow without horizontal overflow.
 
 Final checks passed: `pnpm check`, `pnpm test` (4 files and 7 tests), and `pnpm build`. Database verification confirmed 20 projects, 8 vendors, 1 completed audit run, 15 persisted alerts, 57 evidence records, and 40 financial milestones.
+
+The official-allocation context extension was verified against the preserved public MPLADS export. The model dashboard rendered a completed versioned model trained on 543 public allocation records across 36 states/UTs, with 13 high-variance and 25 moderate-variance context records. The interface prominently states that the model is unsupervised context only and not a fraud classifier.
+
+Final extension checks passed: `pnpm check`, `pnpm test` (5 files and 9 tests), and `pnpm build`. Database verification confirmed 1 official source import, 543 persisted public records, 1 completed allocation-model run, 543 persisted model scores, and 13 high-variance context records.

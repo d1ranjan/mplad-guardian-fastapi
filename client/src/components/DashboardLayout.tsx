@@ -14,13 +14,14 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
-import { Activity, Database, FileUp, FolderSearch, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { Activity, BrainCircuit, Database, FileUp, FolderSearch, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import { useLocation } from "wouter";
 
 const navigation = [
   { label: "Command centre", path: "/", icon: LayoutDashboard },
   { label: "Alert queue", path: "/alerts", icon: Activity },
   { label: "Project register", path: "/projects", icon: FolderSearch },
+  { label: "Allocation context", path: "/allocation", icon: BrainCircuit },
   { label: "Data import", path: "/imports", icon: FileUp },
 ];
 
