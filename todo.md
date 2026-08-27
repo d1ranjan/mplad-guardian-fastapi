@@ -55,3 +55,7 @@
 - [x] Add CSV validation preview before FastAPI import submission, with a clear issue report.
 - [ ] Add a dedicated FastAPI model-operations page for numeric-context training and semantic duplicate comparison.
 - [ ] Verify the FastAPI model-operations workflow end to end with valid reviewer-authorized project data before closing the route-parity task.
+- [ ] Diagnose the published Manus website server error without changing the Render FastAPI or Supabase PostgreSQL data.
+- [ ] Add a GitHub Pages-compatible static frontend build, base-path configuration, and Pages deployment workflow connected to Render.
+- [ ] Configure the exact GitHub Pages origin in Render CORS and verify static-frontend API access.
+- [ ] Publish and verify the MPLAD Guardian website from GitHub Pages while retaining Render FastAPI and Supabase PostgreSQL as secure backend services.

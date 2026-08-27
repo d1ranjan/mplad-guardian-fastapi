@@ -151,8 +151,10 @@ function vitePluginManusDebugCollector(): Plugin {
 }
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const pagesBase = process.env.VITE_PAGES_BASE?.trim();
 
 export default defineConfig({
+  base: pagesBase ? `/${pagesBase.replace(/^\/+|\/+$/g, "")}/` : "/",
   plugins,
   resolve: {
     alias: {
