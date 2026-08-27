@@ -59,3 +59,8 @@
 - [x] Add a GitHub Pages-compatible static frontend build, base-path configuration, and Pages deployment workflow connected to Render.
 - [x] Configure the exact GitHub Pages origin in Render CORS and verify static-frontend API access.
 - [x] Publish and verify the MPLAD Guardian website from GitHub Pages while retaining Render FastAPI and Supabase PostgreSQL as secure backend services.
+- [ ] Add a clearly labelled synthetic presentation-data import control that generates at least twenty realistic but non-official project records for functional model demonstrations.
+- [ ] Add a guarded official-allocation import control using the documented public MPLADS export as the only allocation-context source.
+- [ ] Verify administrator authentication, project import, evidence audit, alert review, numeric-context training, semantic comparison, and allocation-context operations on the deployed stack.
+- [ ] Publish a concise presentation runbook that explains the demonstration sequence and the distinction between synthetic examples, official allocation context, and verified audit findings.
+- [ ] Extend the FastAPI audit run with transparent duplicate-language, vendor-concentration, and stalled-project review signals for the explicitly synthetic presentation dataset.

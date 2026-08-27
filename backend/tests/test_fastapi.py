@@ -2,7 +2,7 @@ import os
 os.environ.setdefault("POSTGRESQL_URL", "postgresql+asyncpg://postgres:postgres@localhost/postgres")
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
 from fastapi.testclient import TestClient
-from app.main import app, parse_official_allocation_csv, parse_project_csv
+from app.main import app, parse_official_allocation_csv, parse_project_csv, text_overlap
 
 def test_health_and_docs_are_exposed():
     client = TestClient(app)
@@ -29,3 +29,9 @@ def test_official_allocation_parser_reads_expected_columns_and_currency_values()
     assert len(rows) == 20
     assert rows[0]["state"] == "Odisha"
     assert rows[0]["allocated_amount"] == 1000.0
+
+
+def test_text_overlap_identifies_related_project_language_without_claiming_a_duplicate():
+    overlap = text_overlap("Construct a covered concrete storm-water drainage channel near Market Road", "Build a cement concrete drainage pathway for storm water beside Market Road")
+    assert overlap >= 0.35
+    assert text_overlap("solar lights", "health facility") == 0.0

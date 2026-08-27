@@ -4,6 +4,7 @@ from typing import Literal
 import jwt
 import csv
 import io
+import re
 from fastapi import Cookie, Depends, FastAPI, File, HTTPException, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -319,6 +320,13 @@ def median(values: list[float]) -> float:
     return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
 
 
+def text_overlap(left: str, right: str) -> float:
+    left_terms = {term for term in re.findall(r"[a-z0-9]+", left.casefold()) if len(term) > 2}
+    right_terms = {term for term in re.findall(r"[a-z0-9]+", right.casefold()) if len(term) > 2}
+    union = left_terms | right_terms
+    return len(left_terms & right_terms) / len(union) if union else 0.0
+
+
 async def train_allocation_context_model(session: AsyncSession, source: OfficialAllocationImport) -> AllocationModelRun:
     records = list((await session.scalars(select(OfficialAllocationRecord).where(OfficialAllocationRecord.source_import_id == source.id))).all())
     if len(records) < 20:
@@ -578,6 +586,28 @@ async def run_audit(session: AsyncSession = Depends(db), user: User = Depends(re
             values = sorted(float(peer.actual_expenditure) for peer in peers); peer_median = values[len(values) // 2]; deviation = ((float(project.actual_expenditure) - peer_median) / max(peer_median, 1)) * 100
             if deviation >= 55:
                 session.add(Alert(audit_run_id=run.id, project_id=project.id, risk_type="cost_outlier", risk_score=min(100, round(deviation)), risk_band="high" if deviation < 80 else "critical", title="Expenditure exceeds transparent peer context", rationale=f"Actual expenditure is {deviation:.1f}% above the median of {len(peers)} comparable records.", evidence={"actual_expenditure": float(project.actual_expenditure), "peer_median": peer_median, "deviation_percent": round(deviation, 2), "peer_count": len(peers)})); run.total_alerts += 1
+        days_since_update = max(0, (datetime.now(timezone.utc) - project.last_update_date).days)
+        if project.project_status == "on_hold" or (project.project_status == "ongoing" and project.progress_percent < 60 and days_since_update >= 90):
+            session.add(Alert(audit_run_id=run.id, project_id=project.id, risk_type="stalled_project", risk_score=min(100, 55 + min(40, days_since_update // 6)), risk_band="high", title="Delivery status requires current implementation context", rationale=f"Status is {project.project_status.replace('_', ' ')} with {project.progress_percent}% progress and an update age of {days_since_update} days.", evidence={"project_status": project.project_status, "progress_percent": project.progress_percent, "days_since_update": days_since_update, "review_question": "Obtain a current milestone update and documented reason for the delay before escalation."})); run.total_alerts += 1
+    vendor_groups: dict[int, list[Project]] = {}
+    for project in projects:
+        if project.vendor_id:
+            vendor_groups.setdefault(project.vendor_id, []).append(project)
+    for vendor_id, vendor_projects in vendor_groups.items():
+        share = len(vendor_projects) / max(len(projects), 1)
+        if len(vendor_projects) >= 4 and share >= 0.25:
+            for project in vendor_projects:
+                session.add(Alert(audit_run_id=run.id, project_id=project.id, risk_type="vendor_concentration", risk_score=min(100, round(share * 100)), risk_band="moderate", title="Vendor concentration warrants portfolio review", rationale=f"One vendor is linked to {len(vendor_projects)} of {len(projects)} records in this imported portfolio ({share:.1%}).", evidence={"vendor_id": vendor_id, "vendor_project_count": len(vendor_projects), "portfolio_project_count": len(projects), "project_share_percent": round(share * 100, 2), "review_question": "Check procurement segmentation, competition records, and delivery capacity."})); run.total_alerts += 1
+    location_groups: dict[tuple[str, str, str, str], list[Project]] = {}
+    for project in projects:
+        location_groups.setdefault((project.category.casefold(), project.state.casefold(), project.district.casefold(), project.locality.casefold()), []).append(project)
+    for group in location_groups.values():
+        for offset, reference in enumerate(group):
+            for candidate in group[offset + 1:]:
+                overlap = text_overlap(f"{reference.title} {reference.description or ''}", f"{candidate.title} {candidate.description or ''}")
+                if overlap >= 0.35:
+                    for project, counterpart in ((reference, candidate), (candidate, reference)):
+                        session.add(Alert(audit_run_id=run.id, project_id=project.id, risk_type="duplicate_language_candidate", risk_score=round(overlap * 100), risk_band="moderate", title="Comparable project language requires source-record review", rationale=f"Project language overlaps {overlap:.0%} with {counterpart.project_code} in the same category and locality.", evidence={"counterpart_project_code": counterpart.project_code, "term_overlap": round(overlap, 4), "same_category": True, "same_locality": True, "review_question": "Compare scope, work order, geo-evidence, dates, and source records before treating this as a duplicate."})); run.total_alerts += 1
     run.status = "completed"; run.completed_at = datetime.now(timezone.utc); await session.commit()
     return {"run_code": run.run_code, "total_projects": run.total_projects, "total_alerts": run.total_alerts, "source_digest": run.source_digest}
 
