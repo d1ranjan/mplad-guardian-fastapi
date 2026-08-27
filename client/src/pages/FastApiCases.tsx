@@ -34,7 +34,6 @@ export function AlertCaseView({ id, token, user, onHydrate, setStatus }: { id: s
 
 export function AllocationView({ token, user }: { token: string; user: GuardianUser }) {
   const [data, setData] = useState<AllocationDashboard | null>(null);
-  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const load = async () => {
@@ -42,13 +41,6 @@ export function AllocationView({ token, user }: { token: string; user: GuardianU
     catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load official allocation context."); }
   };
   useEffect(() => { void load(); }, [token]);
-  const importSource = async () => {
-    if (!file) return;
-    setBusy(true);
-    try { const body = new FormData(); body.append("file", file); await guardianRequest("/allocations/import", token, { method: "POST", body }); await load(); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Official allocation import failed."); }
-    finally { setBusy(false); }
-  };
   const importPackagedOfficialSource = async () => {
     setBusy(true);
     setError("");
@@ -60,7 +52,7 @@ export function AllocationView({ token, user }: { token: string; user: GuardianU
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Official allocation import failed."); }
     finally { setBusy(false); }
   };
-  if (!data) return <section className="portal-import-card"><p className="portal-eyebrow portal-eyebrow-dark">Official public source</p><h2>Official allocation context is not loaded.</h2><p>{error || "Import the packaged public MPLADS allocation export to create a versioned peer-context model. It highlights variance for explanation; it does not classify fraud or wrongdoing."}</p>{user.role === "admin" && <div className="mt-5 space-y-4"><div><button onClick={importPackagedOfficialSource} disabled={busy} className="portal-action-button">{busy ? "Importing official source…" : "Import packaged official allocation source"}</button><p className="mt-2 text-xs leading-5 text-slate-600">Uses the supplied public allocation export and records its checksum, source scope, and retrieval time. No local file selection is required.</p></div><div className="border-t border-slate-200 pt-4"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Or choose a newer official CSV</p><div className="mt-2 flex flex-wrap items-center gap-3"><input aria-label="Official allocation CSV" type="file" accept=".csv,text/csv" onChange={event => setFile(event.target.files?.[0] ?? null)} className="text-sm" /><button onClick={importSource} disabled={!file || busy} className="portal-outline-button">Import selected official source</button></div></div></div>}</section>;
+  if (!data) return <section className="portal-import-card"><p className="portal-eyebrow portal-eyebrow-dark">Official public source</p><h2>Official allocation context is not loaded.</h2><p>{error || "Import the packaged public MPLADS allocation export to create a versioned peer-context model. It highlights variance for explanation; it does not classify fraud or wrongdoing."}</p>{user.role === "admin" && <div className="mt-5"><button onClick={importPackagedOfficialSource} disabled={busy} className="portal-action-button">{busy ? "Importing official source…" : "Import packaged official allocation source"}</button><p className="mt-2 text-xs leading-5 text-slate-600">Uses the supplied public allocation export and records its checksum, source scope, and retrieval time. No local file selection is required.</p></div>}</section>;
   return <div className="portal-view-stack"><section className="portal-context-card"><p>Official source · peer-context model</p><strong>Allocation variance deserves context, not conclusions.</strong><span>{data.model.methodology}</span><small>{data.model.model_code} · {data.source.row_count} public records</small></section><div className="portal-metrics-grid sm:grid-cols-4"><Metric label="Public records" value={data.kpis.record_count} icon={<Database />} /><Metric label="States / UTs" value={data.kpis.state_count} icon={<MapPin />} /><Metric label="High variance" value={data.kpis.high_variance_count} icon={<AlertTriangle />} /><Metric label="Median allocation" value={formatMoney(data.kpis.median_allocation)} icon={<BarChart3 />} /></div><section className="portal-card overflow-hidden"><SectionTitle title="Allocation context register" text="Sorted by variance from a state peer median, with national fallback for smaller peer groups." /><div className="overflow-x-auto"><table className="portal-table min-w-full text-left text-sm"><thead><tr><th className="px-5 py-3">Band</th><th className="px-5 py-3">Constituency</th><th className="px-5 py-3">Amount</th><th className="px-5 py-3">Peer context</th><th className="px-5 py-3">Variance</th></tr></thead><tbody className="divide-y divide-slate-100">{data.records.map(row => <tr key={row.id}><td className="px-5 py-4"><span className="portal-risk-pill">{humanise(row.context_band)}</span></td><td className="px-5 py-4"><Link href={`/allocation/${row.id}`} className="portal-table-link">{row.record.constituency}</Link><p className="mt-1 text-xs text-slate-500">{row.record.state} · {row.record.mp_name}</p></td><td className="px-5 py-4">{formatMoney(row.record.allocated_amount)}</td><td className="px-5 py-4 text-slate-600">{row.state_peer_count} peers · {formatMoney(row.state_peer_median)}</td><td className="px-5 py-4 font-semibold">{row.applied_variance_percent > 0 ? "+" : ""}{row.applied_variance_percent.toFixed(1)}%</td></tr>)}</tbody></table></div></section></div>;
 }
 

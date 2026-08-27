@@ -49,30 +49,30 @@
 - [x] Add the required `POSTGRESQL_URL` and `JWT_SECRET` environment variables to Render, then redeploy the direct FastAPI container.
 - [x] Inspect and resolve the latest Render deployment failure after runtime variables were supplied.
 - [x] Replace the Render database setting with the Supabase Session Pooler URI because the direct Supabase database host is not reachable from the Render container.
-- [ ] Add route-aware FastAPI workspace navigation for projects, imports, alert cases, allocation context, and model operations.
+- [x] Add route-aware FastAPI workspace navigation for projects, imports, alert cases, allocation context, and model operations.
 - [x] Add FastAPI allocation-context storage, provenance, migration, and read endpoints for the official MPLADS allocation export.
 - [x] Add client-side alert-case loading and reviewer-action submission against the FastAPI REST API.
 - [x] Add CSV validation preview before FastAPI import submission, with a clear issue report.
-- [ ] Add a dedicated FastAPI model-operations page for numeric-context training and semantic duplicate comparison.
+- [x] Add a dedicated FastAPI model-operations page for numeric-context training and semantic duplicate comparison.
 - [ ] Verify the FastAPI model-operations workflow end to end with valid reviewer-authorized project data before closing the route-parity task.
 - [x] Diagnose the published Manus website server error without changing the Render FastAPI or Supabase PostgreSQL data.
 - [x] Add a GitHub Pages-compatible static frontend build, base-path configuration, and Pages deployment workflow connected to Render.
 - [x] Configure the exact GitHub Pages origin in Render CORS and verify static-frontend API access.
 - [x] Publish and verify the MPLAD Guardian website from GitHub Pages while retaining Render FastAPI and Supabase PostgreSQL as secure backend services.
-- [ ] Add a clearly labelled synthetic presentation-data import control that generates at least twenty realistic but non-official project records for functional model demonstrations.
-- [ ] Add a guarded official-allocation import control using the documented public MPLADS export as the only allocation-context source.
+- [x] Add a clearly labelled synthetic presentation-data import control that generates at least twenty realistic but non-official project records for functional model demonstrations.
+- [x] Add a guarded official-allocation import control using the documented public MPLADS export as the only allocation-context source.
 - [ ] Verify administrator authentication, project import, evidence audit, alert review, numeric-context training, semantic comparison, and allocation-context operations on the deployed stack.
 - [x] Publish a concise presentation runbook that explains the demonstration sequence and the distinction between synthetic examples, official allocation context, and verified audit findings.
-- [ ] Extend the FastAPI audit run with transparent duplicate-language, vendor-concentration, and stalled-project review signals for the explicitly synthetic presentation dataset.
-- [ ] Replace the multi-step local-file presentation import with a one-click synthetic-data validate-and-import action for administrators.
-- [ ] Package the supplied official allocation CSV as a verified static source asset for administrator-controlled in-app import.
-- [ ] Replace manual official allocation file selection with a one-click source-backed import and peer-context model action.
+- [x] Extend the FastAPI audit run with transparent duplicate-language, vendor-concentration, and stalled-project review signals for the explicitly synthetic presentation dataset.
+- [x] Replace the multi-step local-file presentation import with a one-click synthetic-data validate-and-import action for administrators.
+- [x] Package the supplied official allocation CSV as a verified static source asset for administrator-controlled in-app import.
+- [x] Replace manual official allocation file selection with a one-click source-backed import and peer-context model action.
 - [x] Rewrite automated Git commit authorship and committer metadata to the user-provided Git identity, then verify the forced history update on GitHub.
 - [x] Write and publish a user guide for the live website covering administrator onboarding, data import, audit review, allocation context, and model-operation interpretation.
 - [ ] Diagnose and fix the blank-page failure reported after using the authenticated presentation workflow.
 - [x] Verify and synchronize the complete FastAPI/PostgreSQL project source to GitHub, then deliver a portable ZIP archive with the backend code included.
-- [ ] Add administrator-managed analyst account creation and role assignment so new users can access the audit workflow securely.
-- [ ] Add a website user-management screen and document how administrators and reviewers perform project audits and evidence review.
+- [x] Add administrator-managed analyst account creation and role assignment so new users can access the audit workflow securely.
+- [x] Add a website user-management screen and document how administrators and reviewers perform project audits and evidence review.
 - [x] Analyse the supplied Quark reference project and apply its layout, visual hierarchy, and motion patterns to the MPLAD Guardian frontend.
 - [x] Preserve and visually reintegrate every existing FastAPI-backed feature: authentication, projects, imports, alerts, allocation context, models, and analyst management.
 - [x] Verify the redesigned frontend at desktop and mobile widths, then publish the GitHub Pages update.
