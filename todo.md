@@ -64,4 +64,6 @@
 - [ ] Verify administrator authentication, project import, evidence audit, alert review, numeric-context training, semantic comparison, and allocation-context operations on the deployed stack.
 - [x] Publish a concise presentation runbook that explains the demonstration sequence and the distinction between synthetic examples, official allocation context, and verified audit findings.
 - [ ] Extend the FastAPI audit run with transparent duplicate-language, vendor-concentration, and stalled-project review signals for the explicitly synthetic presentation dataset.
-- [x] Replace the multi-step local-file presentation import with a one-click synthetic-data validate-and-import action for administrators.
+- [ ] Replace the multi-step local-file presentation import with a one-click synthetic-data validate-and-import action for administrators.
+- [ ] Package the supplied official allocation CSV as a verified static source asset for administrator-controlled in-app import.
+- [ ] Replace manual official allocation file selection with a one-click source-backed import and peer-context model action.
