@@ -73,5 +73,9 @@
 - [x] Verify and synchronize the complete FastAPI/PostgreSQL project source to GitHub, then deliver a portable ZIP archive with the backend code included.
 - [ ] Add administrator-managed analyst account creation and role assignment so new users can access the audit workflow securely.
 - [ ] Add a website user-management screen and document how administrators and reviewers perform project audits and evidence review.
+- [ ] Analyse the supplied Quark reference project and apply its layout, visual hierarchy, and motion patterns to the MPLAD Guardian frontend.
+- [ ] Preserve and visually reintegrate every existing FastAPI-backed feature: authentication, projects, imports, alerts, allocation context, models, and analyst management.
+- [ ] Verify the redesigned frontend at desktop and mobile widths, then publish the GitHub Pages update.
+- [ ] Add visible retry behaviour for Render cold starts so a transient API wake-up cannot be mistaken for a permanent frontend failure.
 - [x] Add atomic authenticated session state, session-storage recovery, and visible in-page errors for protected FastAPI workflow failures on GitHub Pages.
 - [x] Harden REST error parsing so non-JSON backend failures cannot cause an uncaught client-side exception.
