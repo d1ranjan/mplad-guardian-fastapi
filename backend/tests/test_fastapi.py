@@ -11,6 +11,7 @@ def test_health_and_docs_are_exposed():
     openapi = client.get("/api/v1/openapi.json").json()
     assert "/api/v1/auth/login" in openapi["paths"]
     assert "/api/v1/auth/bootstrap-admin" in openapi["paths"]
+    assert "/api/v1/users" in openapi["paths"]
     assert "/api/v1/audits/run" in openapi["paths"]
     assert "/api/v1/allocations" in openapi["paths"]
 

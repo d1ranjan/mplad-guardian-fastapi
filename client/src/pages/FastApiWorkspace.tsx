@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, BarChart3, BrainCircuit, ClipboardCheck, Database, FileUp, LogIn, ShieldCheck, UserPlus } from "lucide-react";
+import { AlertTriangle, BarChart3, BrainCircuit, ClipboardCheck, Database, FileUp, LogIn, ShieldCheck, Users, UserPlus } from "lucide-react";
 import { Link, useLocation, useRoute } from "wouter";
 import { API_BASE_URL, apiDocsUrl } from "@/lib/api";
 import { GuardianAlert, GuardianProject, GuardianUser, guardianRequest } from "@/lib/guardianApi";
 import { AlertsView, DashboardView, ImportsView, ModelsView, ProjectsView } from "./FastApiViews";
 import { AlertCaseView, AllocationCaseView, AllocationView } from "./FastApiCases";
+import { TeamView } from "./FastApiTeam";
 
 export default function FastApiWorkspace() {
   const [location] = useLocation();
@@ -97,7 +98,7 @@ export default function FastApiWorkspace() {
     }
   };
 
-  return <div className="min-h-screen bg-[#f7f5f0] text-slate-900"><Header user={user} signOut={signOut} /><main className="mx-auto max-w-7xl px-4 py-6 md:px-6"><Hero status={status} />{!user ? <AccessForm {...{ mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }} /> : <><Navigation path={location} /><WorkspaceRoute path={location} alertId={alertParams?.id} allocationId={allocationParams?.id} token={token} user={user} projects={projects} alerts={alerts} busy={busy} onRunAudit={runAudit} onHydrate={() => hydrate(token)} setStatus={setStatus} /></>}</main></div>;
+  return <div className="min-h-screen bg-[#f7f5f0] text-slate-900"><Header user={user} signOut={signOut} /><main className="mx-auto max-w-7xl px-4 py-6 md:px-6"><Hero status={status} />{!user ? <AccessForm {...{ mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }} /> : <><Navigation path={location} user={user} /><WorkspaceRoute path={location} alertId={alertParams?.id} allocationId={allocationParams?.id} token={token} user={user} projects={projects} alerts={alerts} busy={busy} onRunAudit={runAudit} onHydrate={() => hydrate(token)} setStatus={setStatus} /></>}</main></div>;
 }
 
 function Header({ user, signOut }: { user: GuardianUser | null; signOut: () => Promise<void> }) {
@@ -113,8 +114,8 @@ function AccessForm({ mode, setMode, name, email, password, setName, setEmail, s
   return <form onSubmit={authenticate} className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"><div className="flex gap-2"><button type="button" onClick={() => setMode("login")} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === "login" ? "bg-[#102f4c] text-white" : "bg-slate-100 text-slate-600"}`}>Sign in</button><button type="button" onClick={() => setMode("bootstrap")} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === "bootstrap" ? "bg-[#102f4c] text-white" : "bg-slate-100 text-slate-600"}`}>First administrator</button></div><h2 className="mt-6 font-display text-3xl font-semibold">{mode === "bootstrap" ? "Initialize secure access" : "Enter the analyst workspace"}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{mode === "bootstrap" ? "This one-time setup is available only before any account exists in PostgreSQL." : "Use your JWT-backed analyst account to access project records and review workflows."}</p>{mode === "bootstrap" && field("Full name", "text", name, setName)}{field("Email", "email", email, setEmail)}{field("Password", "password", password, setPassword, 12)}<button disabled={busy} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-[#102f4c] transition hover:bg-amber-200 disabled:opacity-50">{mode === "bootstrap" ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}{busy ? "Working…" : mode === "bootstrap" ? "Create administrator" : "Sign in"}</button></form>;
 }
 
-function Navigation({ path }: { path: string }) {
-  const links = [["/", "Overview", BarChart3], ["/projects", "Projects", Database], ["/imports", "Imports", FileUp], ["/alerts", "Alerts", AlertTriangle], ["/allocation", "Allocation context", ClipboardCheck], ["/models", "Model operations", BrainCircuit]] as const;
+function Navigation({ path, user }: { path: string; user: GuardianUser }) {
+  const links = [["/", "Overview", BarChart3], ["/projects", "Projects", Database], ["/imports", "Imports", FileUp], ["/alerts", "Alerts", AlertTriangle], ["/allocation", "Allocation context", ClipboardCheck], ["/models", "Model operations", BrainCircuit], ...(user.role === "admin" ? [["/team", "Analysts", Users] as const] : [])] as const;
   return <nav className="mb-6 flex gap-2 overflow-x-auto pb-1">{links.map(([href, text, Icon]) => <Link key={href} href={href} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${path === href || (href !== "/" && path.startsWith(href)) ? "bg-[#102f4c] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}><Icon className="h-4 w-4" />{text}</Link>)}</nav>;
 }
 
@@ -126,5 +127,6 @@ function WorkspaceRoute({ path, alertId, allocationId, token, user, projects, al
   if (path === "/alerts") return <AlertsView alerts={alerts} />;
   if (path === "/allocation") return <AllocationView token={token} user={user} />;
   if (path === "/models") return <ModelsView token={token} user={user} projects={projects} />;
+  if (path === "/team") return <TeamView token={token} user={user} />;
   return <DashboardView user={user} projects={projects} alerts={alerts} busy={busy} onRunAudit={onRunAudit} />;
 }

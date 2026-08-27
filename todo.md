@@ -70,6 +70,8 @@
 - [x] Rewrite automated Git commit authorship and committer metadata to the user-provided Git identity, then verify the forced history update on GitHub.
 - [x] Write and publish a user guide for the live website covering administrator onboarding, data import, audit review, allocation context, and model-operation interpretation.
 - [ ] Diagnose and fix the blank-page failure reported after using the authenticated presentation workflow.
-- [ ] Verify and synchronize the complete FastAPI/PostgreSQL project source to GitHub, then deliver a portable ZIP archive with the backend code included.
+- [x] Verify and synchronize the complete FastAPI/PostgreSQL project source to GitHub, then deliver a portable ZIP archive with the backend code included.
+- [ ] Add administrator-managed analyst account creation and role assignment so new users can access the audit workflow securely.
+- [ ] Add a website user-management screen and document how administrators and reviewers perform project audits and evidence review.
 - [x] Add atomic authenticated session state, session-storage recovery, and visible in-page errors for protected FastAPI workflow failures on GitHub Pages.
 - [x] Harden REST error parsing so non-JSON backend failures cannot cause an uncaught client-side exception.

@@ -209,6 +209,16 @@ class BootstrapAdminRequest(LoginRequest):
     name: str = Field(min_length=2, max_length=255)
 
 
+class AnalystCreateRequest(LoginRequest):
+    name: str = Field(min_length=2, max_length=255)
+    role: Literal["reviewer", "viewer"] = "reviewer"
+
+
+class AnalystUpdateRequest(BaseModel):
+    role: Literal["reviewer", "viewer"] | None = None
+    is_active: bool | None = None
+
+
 class ProjectInput(BaseModel):
     project_code: str = Field(min_length=3, max_length=72)
     title: str = Field(min_length=3, max_length=255)
@@ -441,6 +451,44 @@ async def bootstrap_admin(payload: BootstrapAdminRequest, session: AsyncSession 
 @app.get("/api/v1/auth/me", tags=["Authentication"])
 async def me(user: User = Depends(current_user)):
     return {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
+
+
+def user_summary(user: User) -> dict:
+    return {"id": user.id, "name": user.name, "email": user.email, "role": user.role, "is_active": user.is_active, "created_at": user.created_at}
+
+
+@app.get("/api/v1/users", tags=["User management"])
+async def list_users(session: AsyncSession = Depends(db), _user: User = Depends(requires("admin"))):
+    users = list((await session.scalars(select(User).order_by(User.created_at.desc(), User.id.desc()))).all())
+    return [user_summary(user) for user in users]
+
+
+@app.post("/api/v1/users", tags=["User management"], status_code=201)
+async def create_user(payload: AnalystCreateRequest, session: AsyncSession = Depends(db), _user: User = Depends(requires("admin"))):
+    existing = await session.scalar(select(User.id).where(User.email == payload.email.lower()))
+    if existing:
+        raise HTTPException(status_code=409, detail="An account already exists for this email address.")
+    user = User(email=payload.email.lower(), name=" ".join(payload.name.split()), password_hash=passwords.hash(payload.password), role=payload.role, is_active=True)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user_summary(user)
+
+
+@app.patch("/api/v1/users/{user_id}", tags=["User management"])
+async def update_user(user_id: int, payload: AnalystUpdateRequest, session: AsyncSession = Depends(db), administrator: User = Depends(requires("admin"))):
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found.")
+    if user.id == administrator.id and payload.is_active is False:
+        raise HTTPException(status_code=422, detail="An administrator cannot deactivate their own active session.")
+    if payload.role is not None:
+        user.role = payload.role
+    if payload.is_active is not None:
+        user.is_active = payload.is_active
+    await session.commit()
+    await session.refresh(user)
+    return user_summary(user)
 
 
 @app.post("/api/v1/auth/refresh", tags=["Authentication"])
