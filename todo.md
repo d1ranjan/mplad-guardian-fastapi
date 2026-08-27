@@ -43,7 +43,7 @@
 - [x] Create or connect the Render backend service and configure PostgreSQL, JWT, CORS, and model settings securely.
 - [x] Point the Manus-hosted React application to the Render API URL and restrict CORS to the frontend domain.
 - [x] Verify the public Render health and Swagger endpoints plus authentication and protected API behavior.
-- [ ] Checkpoint the external-backend frontend integration and document operation of the deployed split architecture.
+- [x] Checkpoint the external-backend frontend integration and document operation of the deployed split architecture.
 - [x] Push the complete FastAPI/PostgreSQL source to the exact GitHub repository connected to the Render MPLAD project.
 - [x] Replace the current Render container startup path, which is serving the legacy Node frontend proxy while FastAPI is unavailable at `127.0.0.1:8001`, with a direct FastAPI deployment configuration.
 - [x] Add the required `POSTGRESQL_URL` and `JWT_SECRET` environment variables to Render, then redeploy the direct FastAPI container.
