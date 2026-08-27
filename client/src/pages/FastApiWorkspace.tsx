@@ -70,8 +70,12 @@ export default function FastApiWorkspace() {
         const stored = window.sessionStorage.getItem("guardian_access_token");
         if (stored) await hydrate(stored);
         else {
-          const renewed = await guardianRequest<{ access_token: string }>("/auth/refresh", undefined, { method: "POST" });
-          if (active) await hydrate(renewed.access_token);
+          try {
+            const renewed = await guardianRequest<{ access_token: string }>("/auth/refresh", undefined, { method: "POST" });
+            if (active) await hydrate(renewed.access_token);
+          } catch {
+            if (active) setStatus(`${health.service} is available. Sign in to access the secure workspace.`);
+          }
         }
       } catch (error) {
         if (active) setStatus(error instanceof Error ? `${error.message} Refresh in a moment and sign in again if needed.` : "The secure API service is temporarily unavailable. Refresh in a moment and sign in again if needed.");

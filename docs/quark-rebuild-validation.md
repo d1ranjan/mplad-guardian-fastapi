@@ -7,3 +7,5 @@ The corrected local landing page now follows the supplied Quark composition: a b
 ## Local preview caveat
 
 The managed preview domain is not in the deliberately restricted Render CORS allow-list. Its public landing page therefore showed `Failed to fetch` in the health status after the retry sequence, while the API remains healthy and permits the GitHub Pages origin. This is a preview-origin limitation rather than a blank-page or production GitHub Pages failure; production must be verified at `https://d1ranjan.github.io/mplad-guardian-fastapi/` after publication.
+
+The published GitHub Pages revision `f2802da` loaded the full staged opening animation and the post-animation Quark portal structure successfully. An unsigned visitor then received the expected refresh-token rejection after the health check; the frontend now keeps the successful service state and displays a clear sign-in prompt rather than presenting that expected unauthenticated response as a service failure.
