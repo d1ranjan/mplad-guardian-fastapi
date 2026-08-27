@@ -13,7 +13,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from passlib.context import CryptContext
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func, select
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, and_, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -148,6 +148,57 @@ class ModelRun(Base):
     trained_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class OfficialAllocationImport(Base):
+    __tablename__ = "official_allocation_imports"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    original_filename: Mapped[str] = mapped_column(String(255))
+    source_url: Mapped[str] = mapped_column(String(512))
+    source_scope: Mapped[str] = mapped_column(Text)
+    source_sha256: Mapped[str] = mapped_column(String(96), unique=True, index=True)
+    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    row_count: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OfficialAllocationRecord(Base):
+    __tablename__ = "official_allocation_records"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_import_id: Mapped[int] = mapped_column(ForeignKey("official_allocation_imports.id", ondelete="CASCADE"), index=True)
+    source_row_number: Mapped[int] = mapped_column(Integer)
+    state: Mapped[str] = mapped_column(String(128), index=True)
+    mp_name: Mapped[str] = mapped_column(String(255))
+    constituency: Mapped[str] = mapped_column(String(255))
+    allocated_amount: Mapped[float] = mapped_column(Numeric(16, 2))
+
+
+class AllocationModelRun(Base):
+    __tablename__ = "allocation_model_runs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model_code: Mapped[str] = mapped_column(String(96), unique=True, index=True)
+    model_version: Mapped[str] = mapped_column(String(96))
+    source_import_id: Mapped[int] = mapped_column(ForeignKey("official_allocation_imports.id", ondelete="RESTRICT"), index=True)
+    training_rows: Mapped[int] = mapped_column(Integer)
+    methodology: Mapped[str] = mapped_column(Text)
+    configuration: Mapped[dict] = mapped_column(JSONB, default=dict)
+    evaluation: Mapped[dict] = mapped_column(JSONB, default=dict)
+    status: Mapped[str] = mapped_column(String(24), default="completed")
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AllocationModelScore(Base):
+    __tablename__ = "allocation_model_scores"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model_run_id: Mapped[int] = mapped_column(ForeignKey("allocation_model_runs.id", ondelete="CASCADE"), index=True)
+    allocation_record_id: Mapped[int] = mapped_column(ForeignKey("official_allocation_records.id", ondelete="CASCADE"), index=True)
+    context_band: Mapped[str] = mapped_column(String(32), index=True)
+    model_score: Mapped[int] = mapped_column(Integer)
+    variance_direction: Mapped[str] = mapped_column(String(32))
+    state_peer_count: Mapped[int] = mapped_column(Integer)
+    state_peer_median: Mapped[float] = mapped_column(Numeric(16, 2))
+    national_peer_median: Mapped[float] = mapped_column(Numeric(16, 2))
+    applied_variance_percent: Mapped[float] = mapped_column(Numeric(12, 2))
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=12, max_length=256)
@@ -187,6 +238,9 @@ class DuplicateCompareInput(BaseModel):
 
 
 REQUIRED_CSV_HEADERS = {"project_code", "title", "category", "state", "district", "locality", "vendor_name", "financial_year", "sanctioned_amount", "actual_expenditure", "sanction_date", "expected_completion_date", "last_update_date", "progress_percent", "project_status"}
+OFFICIAL_ALLOCATION_HEADERS = {"State", "Hon'ble Members of Parliaments", "Constituency", "Allocated AMOUNT ( ₹ )"}
+OFFICIAL_ALLOCATION_SOURCE_URL = "https://mplads.mospi.gov.in/digigov/dashboard.html"
+OFFICIAL_ALLOCATION_SOURCE_SCOPE = "18th Lok Sabha public dashboard allocation export; state, MP, constituency, and allocated amount."
 
 
 def parse_project_csv(content: bytes) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
@@ -226,6 +280,82 @@ def validate_project_csv_rows(rows: list[dict[str, str]], issues: list[dict[str,
         if project.project_status == "completed" and project.progress_percent < 95:
             report.append({"row": str(number), "field": "progress_percent", "severity": "warning", "message": "Completed project reports progress below 95%."})
     return report
+
+
+def parse_official_allocation_csv(content: bytes) -> list[dict[str, str | float | int]]:
+    try:
+        reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Official allocation CSV must use UTF-8 encoding.") from exc
+    headers = set(reader.fieldnames or [])
+    missing = sorted(OFFICIAL_ALLOCATION_HEADERS - headers)
+    if missing:
+        raise HTTPException(status_code=422, detail={"message": "This is not the expected official allocation export.", "missing_headers": missing})
+    parsed: list[dict[str, str | float | int]] = []
+    issues: list[dict[str, str | int]] = []
+    for row_number, row in enumerate(reader, start=2):
+        state = (row.get("State") or "").strip()
+        mp_name = (row.get("Hon'ble Members of Parliaments") or "").strip()
+        constituency = (row.get("Constituency") or "").strip()
+        amount_text = (row.get("Allocated AMOUNT ( ₹ )") or "").replace(",", "").replace("₹", "").strip()
+        try:
+            amount = float(amount_text)
+        except ValueError:
+            amount = -1
+        if not state or not mp_name or not constituency or amount < 0:
+            issues.append({"row": row_number, "message": "State, MP name, constituency, and a non-negative allocated amount are required."})
+            continue
+        parsed.append({"source_row_number": row_number, "state": state, "mp_name": mp_name, "constituency": constituency, "allocated_amount": amount})
+    if issues:
+        raise HTTPException(status_code=422, detail={"message": "Official allocation CSV has invalid records.", "issues": issues[:100]})
+    if len(parsed) < 20:
+        raise HTTPException(status_code=422, detail="At least 20 official allocation records are required for peer-context analysis.")
+    return parsed
+
+
+def median(values: list[float]) -> float:
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
+
+
+async def train_allocation_context_model(session: AsyncSession, source: OfficialAllocationImport) -> AllocationModelRun:
+    records = list((await session.scalars(select(OfficialAllocationRecord).where(OfficialAllocationRecord.source_import_id == source.id))).all())
+    if len(records) < 20:
+        raise HTTPException(status_code=422, detail="At least 20 official allocation records are required for peer-context analysis.")
+    national_median = median([float(record.allocated_amount) for record in records])
+    by_state: dict[str, list[OfficialAllocationRecord]] = {}
+    for record in records:
+        by_state.setdefault(record.state, []).append(record)
+    run = AllocationModelRun(
+        model_code=f"ALLOC-{source.source_sha256[:10].upper()}-{datetime.now(timezone.utc):%H%M%S}",
+        model_version="official-allocation-context-v1",
+        source_import_id=source.id,
+        training_rows=len(records),
+        methodology="Unsupervised state peer-median allocation variance model. It is review context, not a fraud classifier; variance may have legitimate administrative explanations.",
+        configuration={"minimum_state_peer_count": 5, "score": "absolute percentage deviation from state median with national fallback"},
+        evaluation={"training_rows": len(records), "state_count": len(by_state), "national_peer_median": national_median, "validation": "Unsupervised peer-context model; no fraud labels are present, so precision/recall and fraud-classification claims are not calculated."},
+        status="completed",
+        completed_at=datetime.now(timezone.utc),
+    )
+    session.add(run)
+    await session.flush()
+    for record in records:
+        peers = by_state[record.state]
+        state_median = median([float(peer.allocated_amount) for peer in peers])
+        baseline = state_median if len(peers) >= 5 else national_median
+        variance = ((float(record.allocated_amount) - baseline) / max(baseline, 1)) * 100
+        score = min(100, round(abs(variance)))
+        session.add(AllocationModelScore(
+            model_run_id=run.id,
+            allocation_record_id=record.id,
+            context_band="high_variance" if score >= 50 else "moderate_variance" if score >= 25 else "expected_range",
+            model_score=score,
+            variance_direction="above_peer_median" if variance > 0.5 else "below_peer_median" if variance < -0.5 else "at_peer_median",
+            state_peer_count=len(peers), state_peer_median=state_median, national_peer_median=national_median,
+            applied_variance_percent=round(variance, 2),
+        ))
+    return run
 
 
 security = HTTPBearer(auto_error=False)
@@ -388,6 +518,50 @@ async def import_csv(file: UploadFile = File(...), session: AsyncSession = Depen
         session.add(Project(**project_data.model_dump(exclude={"vendor_name"}), vendor_id=vendor.id, source_checksum=digest))
     await session.commit()
     return {"import_id": imported.id, "accepted_rows": len(rows), "checksum": digest, "message": "CSV and import provenance were persisted."}
+
+
+@app.post("/api/v1/allocations/import", tags=["Official allocation context"], status_code=201)
+async def import_official_allocations(file: UploadFile = File(...), session: AsyncSession = Depends(db), _user: User = Depends(requires("admin"))):
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=422, detail="Upload the official allocation .csv export.")
+    content = await file.read()
+    if len(content) > 5_000_000:
+        raise HTTPException(status_code=413, detail="CSV files are limited to 5 MB.")
+    records = parse_official_allocation_csv(content)
+    digest = sha256(content).hexdigest()
+    existing = await session.scalar(select(OfficialAllocationImport).where(OfficialAllocationImport.source_sha256 == digest))
+    if existing:
+        existing_model = await session.scalar(select(AllocationModelRun).where(AllocationModelRun.source_import_id == existing.id).order_by(AllocationModelRun.completed_at.desc()))
+        return {"import_id": existing.id, "model_code": existing_model.model_code if existing_model else None, "row_count": existing.row_count, "message": "This official source export is already preserved."}
+    imported = OfficialAllocationImport(original_filename=file.filename, source_url=OFFICIAL_ALLOCATION_SOURCE_URL, source_scope=OFFICIAL_ALLOCATION_SOURCE_SCOPE, source_sha256=digest, retrieved_at=datetime.now(timezone.utc), row_count=len(records))
+    session.add(imported)
+    await session.flush()
+    session.add_all([OfficialAllocationRecord(source_import_id=imported.id, **record) for record in records])
+    await session.flush()
+    model = await train_allocation_context_model(session, imported)
+    await session.commit()
+    return {"import_id": imported.id, "model_code": model.model_code, "row_count": imported.row_count, "message": "Official allocation provenance and peer-context model were persisted."}
+
+
+@app.get("/api/v1/allocations", tags=["Official allocation context"])
+async def allocation_dashboard(session: AsyncSession = Depends(db), _user: User = Depends(current_user)):
+    model = await session.scalar(select(AllocationModelRun).where(AllocationModelRun.status == "completed").order_by(AllocationModelRun.completed_at.desc()).limit(1))
+    if not model:
+        raise HTTPException(status_code=404, detail="No official allocation context model has been created yet.")
+    source = await session.get(OfficialAllocationImport, model.source_import_id)
+    rows = (await session.execute(select(AllocationModelScore, OfficialAllocationRecord).join(OfficialAllocationRecord, AllocationModelScore.allocation_record_id == OfficialAllocationRecord.id).where(AllocationModelScore.model_run_id == model.id).order_by(AllocationModelScore.model_score.desc(), OfficialAllocationRecord.allocated_amount.desc()))).all()
+    bands = ("high_variance", "moderate_variance", "expected_range")
+    return {"model": {"model_code": model.model_code, "model_version": model.model_version, "methodology": model.methodology, "evaluation": model.evaluation, "completed_at": model.completed_at}, "source": {"source_url": source.source_url if source else None, "source_scope": source.source_scope if source else None, "source_sha256": source.source_sha256 if source else None, "retrieved_at": source.retrieved_at if source else None, "row_count": source.row_count if source else 0}, "kpis": {"record_count": len(rows), "state_count": len({record.state for _, record in rows}), "high_variance_count": sum(1 for score, _ in rows if score.context_band == "high_variance"), "median_allocation": float((model.evaluation or {}).get("national_peer_median", 0))}, "band_breakdown": [{"band": band, "count": sum(1 for score, _ in rows if score.context_band == band)} for band in bands], "records": [{"id": score.id, "context_band": score.context_band, "model_score": score.model_score, "variance_direction": score.variance_direction, "state_peer_count": score.state_peer_count, "state_peer_median": float(score.state_peer_median), "national_peer_median": float(score.national_peer_median), "applied_variance_percent": float(score.applied_variance_percent), "record": {"id": record.id, "source_row_number": record.source_row_number, "state": record.state, "mp_name": record.mp_name, "constituency": record.constituency, "allocated_amount": float(record.allocated_amount)}} for score, record in rows[:50]]}
+
+
+@app.get("/api/v1/allocations/{score_id}", tags=["Official allocation context"])
+async def allocation_case(score_id: int, session: AsyncSession = Depends(db), _user: User = Depends(current_user)):
+    result = (await session.execute(select(AllocationModelScore, OfficialAllocationRecord, AllocationModelRun, OfficialAllocationImport).join(OfficialAllocationRecord, AllocationModelScore.allocation_record_id == OfficialAllocationRecord.id).join(AllocationModelRun, AllocationModelScore.model_run_id == AllocationModelRun.id).join(OfficialAllocationImport, AllocationModelRun.source_import_id == OfficialAllocationImport.id).where(AllocationModelScore.id == score_id))).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Allocation context record not found.")
+    score, record, model, source = result
+    peers = (await session.execute(select(AllocationModelScore, OfficialAllocationRecord).join(OfficialAllocationRecord, AllocationModelScore.allocation_record_id == OfficialAllocationRecord.id).where(and_(AllocationModelScore.model_run_id == model.id, OfficialAllocationRecord.state == record.state)).order_by(OfficialAllocationRecord.allocated_amount.desc()))).all()
+    return {"score": {"id": score.id, "context_band": score.context_band, "model_score": score.model_score, "variance_direction": score.variance_direction, "state_peer_count": score.state_peer_count, "state_peer_median": float(score.state_peer_median), "national_peer_median": float(score.national_peer_median), "applied_variance_percent": float(score.applied_variance_percent)}, "record": {"id": record.id, "state": record.state, "mp_name": record.mp_name, "constituency": record.constituency, "allocated_amount": float(record.allocated_amount)}, "model": {"model_code": model.model_code, "model_version": model.model_version, "methodology": model.methodology, "evaluation": model.evaluation}, "source": {"source_url": source.source_url, "source_scope": source.source_scope, "source_sha256": source.source_sha256, "retrieved_at": source.retrieved_at}, "state_peers": [{"record_id": peer_record.id, "mp_name": peer_record.mp_name, "constituency": peer_record.constituency, "allocated_amount": float(peer_record.allocated_amount), "model_score": peer_score.model_score, "applied_variance_percent": float(peer_score.applied_variance_percent)} for peer_score, peer_record in peers]}
 
 
 @app.post("/api/v1/audits/run", tags=["Audit workflow"])

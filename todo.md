@@ -49,3 +49,7 @@
 - [x] Add the required `POSTGRESQL_URL` and `JWT_SECRET` environment variables to Render, then redeploy the direct FastAPI container.
 - [x] Inspect and resolve the latest Render deployment failure after runtime variables were supplied.
 - [x] Replace the Render database setting with the Supabase Session Pooler URI because the direct Supabase database host is not reachable from the Render container.
+- [ ] Add route-aware FastAPI workspace navigation for projects, imports, alert cases, allocation context, and model operations.
+- [ ] Add FastAPI allocation-context storage, provenance, migration, and read endpoints for the official MPLADS allocation export.
+- [ ] Add client-side alert-case loading and reviewer-action submission against the FastAPI REST API.
+- [ ] Add CSV validation preview before FastAPI import submission, with a clear issue report.

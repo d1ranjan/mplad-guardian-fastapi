@@ -2,7 +2,7 @@ import os
 os.environ.setdefault("POSTGRESQL_URL", "postgresql+asyncpg://postgres:postgres@localhost/postgres")
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
 from fastapi.testclient import TestClient
-from app.main import app, parse_project_csv
+from app.main import app, parse_official_allocation_csv, parse_project_csv
 
 def test_health_and_docs_are_exposed():
     client = TestClient(app)
@@ -12,6 +12,7 @@ def test_health_and_docs_are_exposed():
     assert "/api/v1/auth/login" in openapi["paths"]
     assert "/api/v1/auth/bootstrap-admin" in openapi["paths"]
     assert "/api/v1/audits/run" in openapi["paths"]
+    assert "/api/v1/allocations" in openapi["paths"]
 
 
 def test_csv_parser_reports_duplicate_project_codes_without_accepting_them():
@@ -19,3 +20,12 @@ def test_csv_parser_reports_duplicate_project_codes_without_accepting_them():
     rows, issues = parse_project_csv(content)
     assert len(rows) == 2
     assert issues[0]["field"] == "project_code"
+
+
+def test_official_allocation_parser_reads_expected_columns_and_currency_values():
+    header = "\ufeff\"Sr. No.\",State,Hon'ble Members of Parliaments,Constituency,Allocated AMOUNT ( ₹ )\n"
+    records = "".join(f"{index},Odisha,Example MP {index},Example Constituency {index},\"1,000\"\n" for index in range(1, 21))
+    rows = parse_official_allocation_csv((header + records).encode())
+    assert len(rows) == 20
+    assert rows[0]["state"] == "Odisha"
+    assert rows[0]["allocated_amount"] == 1000.0
