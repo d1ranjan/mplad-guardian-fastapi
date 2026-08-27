@@ -67,3 +67,4 @@
 - [ ] Replace the multi-step local-file presentation import with a one-click synthetic-data validate-and-import action for administrators.
 - [ ] Package the supplied official allocation CSV as a verified static source asset for administrator-controlled in-app import.
 - [ ] Replace manual official allocation file selection with a one-click source-backed import and peer-context model action.
+- [ ] Rewrite automated Git commit authorship and committer metadata to the user-provided Git identity, then verify the forced history update on GitHub.
