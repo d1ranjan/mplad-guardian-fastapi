@@ -68,3 +68,4 @@
 - [ ] Package the supplied official allocation CSV as a verified static source asset for administrator-controlled in-app import.
 - [ ] Replace manual official allocation file selection with a one-click source-backed import and peer-context model action.
 - [x] Rewrite automated Git commit authorship and committer metadata to the user-provided Git identity, then verify the forced history update on GitHub.
+- [x] Write and publish a user guide for the live website covering administrator onboarding, data import, audit review, allocation context, and model-operation interpretation.
