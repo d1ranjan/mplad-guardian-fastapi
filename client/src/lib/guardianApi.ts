@@ -12,9 +12,11 @@ export async function guardianRequest<T>(path: string, token?: string, init?: Re
   if (!(init?.body instanceof FormData)) Object.assign(headers, { "Content-Type": "application/json" });
   const response = await fetch(apiUrl(path), { ...init, credentials: "include", headers });
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    const detail = body.detail;
-    throw new Error(typeof detail === "string" ? detail : detail?.message || "Request failed.");
+    const raw = await response.text().catch(() => "");
+    let detail: unknown;
+    try { detail = JSON.parse(raw).detail; } catch { detail = raw; }
+    const message = typeof detail === "string" ? detail : (detail as { message?: string } | undefined)?.message;
+    throw new Error(message || `Request failed with status ${response.status}.`);
   }
   return response.status === 204 ? (undefined as T) : response.json();
 }

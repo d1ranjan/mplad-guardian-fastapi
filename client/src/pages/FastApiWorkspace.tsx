@@ -21,12 +21,19 @@ export default function FastApiWorkspace() {
   const [mode, setMode] = useState<"login" | "bootstrap">("login");
   const [busy, setBusy] = useState(false);
 
+  const clearSession = (message: string) => {
+    window.sessionStorage.removeItem("guardian_access_token");
+    setToken(""); setUser(null); setProjects([]); setAlerts([]); setStatus(message);
+  };
+
   const hydrate = async (accessToken: string) => {
+    if (!accessToken) throw new Error("Your session has expired. Please sign in again.");
     const [currentUser, projectData, alertData] = await Promise.all([
       guardianRequest<GuardianUser>("/auth/me", accessToken),
       guardianRequest<GuardianProject[]>("/projects", accessToken),
       guardianRequest<GuardianAlert[]>("/alerts", accessToken),
     ]);
+    window.sessionStorage.setItem("guardian_access_token", accessToken);
     setToken(accessToken);
     setUser(currentUser);
     setProjects(projectData);
@@ -40,10 +47,15 @@ export default function FastApiWorkspace() {
       try {
         const health = await guardianRequest<{ service: string }>("/health");
         if (active) setStatus(`${health.service} is available.`);
-        const renewed = await guardianRequest<{ access_token: string }>("/auth/refresh", undefined, { method: "POST" });
-        if (active) await hydrate(renewed.access_token);
-      } catch {
-        if (active) setStatus("Sign in to use the secured PostgreSQL workspace.");
+        const stored = window.sessionStorage.getItem("guardian_access_token");
+        if (stored) {
+          await hydrate(stored);
+        } else {
+          const renewed = await guardianRequest<{ access_token: string }>("/auth/refresh", undefined, { method: "POST" });
+          if (active) await hydrate(renewed.access_token);
+        }
+      } catch (error) {
+        if (active) clearSession(error instanceof Error && !error.message.includes("Refresh token") ? error.message : "Sign in to use the secured PostgreSQL workspace.");
       }
     };
     void initialise();
@@ -69,7 +81,7 @@ export default function FastApiWorkspace() {
 
   const signOut = async () => {
     await guardianRequest("/auth/logout", undefined, { method: "POST" }).catch(() => undefined);
-    setToken(""); setUser(null); setProjects([]); setAlerts([]); setStatus("Signed out.");
+    clearSession("Signed out.");
   };
 
   const runAudit = async () => {

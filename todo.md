@@ -69,3 +69,6 @@
 - [ ] Replace manual official allocation file selection with a one-click source-backed import and peer-context model action.
 - [x] Rewrite automated Git commit authorship and committer metadata to the user-provided Git identity, then verify the forced history update on GitHub.
 - [x] Write and publish a user guide for the live website covering administrator onboarding, data import, audit review, allocation context, and model-operation interpretation.
+- [ ] Diagnose and fix the blank-page failure reported after using the authenticated presentation workflow.
+- [ ] Add atomic authenticated session state, session-storage recovery, and visible in-page errors for protected FastAPI workflow failures on GitHub Pages.
+- [ ] Harden REST error parsing so non-JSON backend failures cannot cause an uncaught client-side exception.
