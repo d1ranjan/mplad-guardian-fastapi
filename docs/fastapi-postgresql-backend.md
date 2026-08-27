@@ -1,6 +1,6 @@
 # FastAPI and PostgreSQL Backend
 
-This release adds an independently operable **Python FastAPI backend** to MPLAD Guardian. In production, FastAPI serves both the React client and the `/api/v1` REST API from a single origin. PostgreSQL is accessed through SQLAlchemy’s asynchronous `asyncpg` driver, and Alembic applies the versioned schema at container startup.
+This release adds an independently operable **Python FastAPI backend** to MPLAD Guardian. In production, FastAPI runs as a direct Render Docker web service and the React analyst workspace is hosted separately on Manus. PostgreSQL is accessed through SQLAlchemy’s asynchronous `asyncpg` driver, and Alembic applies the versioned schema at container startup.
 
 ## Stack
 
@@ -8,22 +8,32 @@ This release adds an independently operable **Python FastAPI backend** to MPLAD 
 |---|---|
 | API | FastAPI with generated OpenAPI and Swagger UI at `/docs` |
 | Database | PostgreSQL via SQLAlchemy 2.0 and `asyncpg` |
-| Migrations | Alembic, revision `0001_guardian` |
+| Migrations | Alembic, revision `0002_import_provenance` |
 | Validation | Pydantic request contracts and field constraints |
 | Authentication | bcrypt password hashes, short-lived JWT access tokens, secure refresh cookie, and role dependencies |
 | ML | scikit-learn `IsolationForest` numeric-context service and lazy Sentence Transformers semantic comparison |
-| Frontend | React workspace calling the typed REST response shapes at `/api/v1` |
+| Frontend | React workspace uses the public `VITE_API_BASE_URL`, with a same-origin `/api/v1` fallback for local development |
 
 ## Database setup
 
-`POSTGRESQL_URL` is a secure server-side environment variable. Both standard `postgresql://` and SQLAlchemy `postgresql+asyncpg://` URI forms are accepted; the service normalises the former to the async driver. Apply the schema manually during local development:
+`POSTGRESQL_URL` is a secure server-side environment variable. Both standard `postgresql://` and SQLAlchemy `postgresql+asyncpg://` URI forms are accepted; the service normalises the former to the async driver. For Render, use the Supabase **Session Pooler** URI, with a hostname ending in `.pooler.supabase.com`; do not use the direct `db.<project-ref>.supabase.co` host because its network path is not reachable from this deployment. Apply the schema manually during local development:
 
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-The deployed container performs the same idempotent migration before starting Uvicorn. The initial schema contains users, vendors, projects, audit runs, alerts, reviewer actions, and persisted model-run metadata. The schema uses foreign keys and JSONB evidence/provenance columns to preserve an inspectable audit trail.
+The deployed container performs the same idempotent migration before starting Uvicorn. The initial schema contains users, vendors, projects, audit runs, alerts, reviewer actions, persisted import provenance, and model-run metadata. The schema uses foreign keys and JSONB evidence/provenance columns to preserve an inspectable audit trail.
+
+## Render deployment and frontend connection
+
+The committed `Dockerfile` starts FastAPI directly with `alembic upgrade head` followed by Uvicorn bound to Render’s supplied `PORT`. The accompanying `render.yaml` describes the Docker web service, automated health check, safe secret placeholders, and the `POSTGRESQL_URL`, `JWT_SECRET`, `CORS_ORIGINS`, `ACCESS_TOKEN_MINUTES`, and `REFRESH_TOKEN_DAYS` settings.
+
+`POSTGRESQL_URL` is deliberately marked `sync: false` in the Blueprint and must be pasted only in Render’s Environment settings. `JWT_SECRET` should be generated in Render. Neither value belongs in source control. `CORS_ORIGINS` must exactly match the published frontend origin: `https://mpladguard-dtzanqrn.manus.space`.
+
+The Manus project stores the non-secret `VITE_API_BASE_URL` as `https://mplad-guardian-fastapi.onrender.com/api/v1`. The client opens Swagger at the matching Render `/docs` URL and sends its Bearer access token to that API base. The refresh cookie is configured as `HttpOnly`, `Secure`, and `SameSite=None` for the split-origin workflow. Browsers that block third-party cookies can still use the application after a normal sign-in, but may need to sign in again after an access token expires.
+
+The Render service’s `/api/v1/health`, `/api/v1/ready`, `/docs`, and `/api/v1/openapi.json` routes were verified after the pooler configuration was applied. The public API correctly rejects a protected endpoint without a Bearer token, and its CORS preflight permits the published Manus frontend origin with credentials.
 
 ## First administrator and access control
 
@@ -61,4 +71,4 @@ alembic current
 uvicorn app.main:app --reload
 ```
 
-At the project root, also run `pnpm test`, `pnpm check`, and `pnpm build`. The deployed container has a Node build stage, a Python 3 runtime, and a CPU-only PyTorch installation for Sentence Transformers. Models are loaded lazily to avoid consuming memory until a protected semantic operation is requested.
+At the project root, also run `pnpm test`, `pnpm check`, and `pnpm build`. The deployed container builds the React bundle, includes a Python 3 runtime and CPU-only PyTorch installation for Sentence Transformers, then starts the FastAPI web service. Models are loaded lazily to avoid consuming memory until a protected semantic operation is requested.

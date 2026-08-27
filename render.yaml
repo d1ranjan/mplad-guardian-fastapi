@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: mplad-guardian-fastapi
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: POSTGRESQL_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://mpladguard-dtzanqrn.manus.space
+      - key: ACCESS_TOKEN_MINUTES
+        value: "15"
+      - key: REFRESH_TOKEN_DAYS
+        value: "7"
