@@ -79,3 +79,6 @@
 - [x] Add visible retry behaviour for Render cold starts so a transient API wake-up cannot be mistaken for a permanent frontend failure.
 - [x] Add atomic authenticated session state, session-storage recovery, and visible in-page errors for protected FastAPI workflow failures on GitHub Pages.
 - [x] Harden REST error parsing so non-JSON backend failures cannot cause an uncaught client-side exception.
+- [x] Replace the approximate Quark-inspired frontend with a screen-by-screen faithful adaptation of the supplied Quark reference while retaining all MPLAD Guardian workflows.
+- [ ] Verify the corrected reference-aligned interface at desktop and mobile widths, then publish the GitHub Pages revision.
+- [x] Convert imports, alerts, alert cases, allocation context, allocation cases, models, and analyst management to explicit Quark-aligned workflow compositions.
