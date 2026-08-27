@@ -17,3 +17,5 @@ The Quark reference is an input-design source, not a replacement data model. MPL
 ## Deployment verification note
 
 Before the redesign was published, the GitHub Pages production site correctly reached the allowed Render origin and displayed its signed-out secure-workspace status. The redesigned portal was verified against the local preview at desktop and mobile widths. Its source changes remain to be published through the existing GitHub Pages workflow.
+
+The redesign was subsequently published through GitHub Pages commit `38c1343`. A cache-busted production visit confirmed the new government portal header, hero, responsive secure-access screen, reference asset, and a successful Render service status. GitHub Pages may briefly serve an earlier hashed asset bundle to an uncached root URL; a normal hard refresh or a short wait retrieves the new bundle.
