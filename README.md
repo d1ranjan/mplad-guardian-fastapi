@@ -24,6 +24,10 @@ The application uses React 19, Tailwind CSS, tRPC, Express, Drizzle ORM, MySQL/T
 
 The central domain is documented in [docs/architecture.md](docs/architecture.md). The detailed field definitions are in [docs/data-dictionary.md](docs/data-dictionary.md). The official-source assessment and model boundary are documented in [docs/training-data-assessment.md](docs/training-data-assessment.md).
 
+## FastAPI and PostgreSQL service
+
+The application now includes a Python-first backend at `backend/`. It uses **FastAPI, PostgreSQL, SQLAlchemy, Pydantic, JWT, Alembic, scikit-learn, and Sentence Transformers**, with Swagger/OpenAPI available at `/docs` in the Python deployment. The complete configuration and API guide is available in [docs/fastapi-postgresql-backend.md](docs/fastapi-postgresql-backend.md).
+
 ## Local setup
 
 The managed project environment already includes its database credentials and supporting services. For local development in this workspace:

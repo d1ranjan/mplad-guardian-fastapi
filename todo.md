@@ -29,3 +29,13 @@
 - [x] Add training/evaluation tests and update operational documentation for the official-data model extension.
 - [x] Verify official source ingestion, persisted model provenance, scored records, responsive allocation views, tests, and production build.
 - [ ] Obtain verified project-level audit outcomes before building or claiming a supervised fraud-classification model.
+- [x] Verify PostgreSQL connectivity and apply the initial Alembic migration for the FastAPI target database.
+- [x] Implement FastAPI configuration, Pydantic contracts, JWT authentication, SQLAlchemy domain models, and Alembic migrations.
+- [x] Implement FastAPI project import, explainable audit, alert review, model-management, health, and Swagger/OpenAPI endpoints.
+- [x] Add scikit-learn anomaly modelling and Sentence Transformers semantic comparison with safe explanation outputs.
+- [x] Convert the React analyst workspace from tRPC to the FastAPI REST contract and JWT session flow.
+- [x] Add the Python runtime deployment configuration, user-bootstrap process, API/ML tests, migration documentation, and production validation.
+- [x] Add FastAPI CSV upload, persistent import provenance, complete per-row validation reporting, and detailed alert-case endpoints.
+- [ ] Implement FastAPI-backed route parity for alert detail, projects, imports, and allocation views with in-memory JWT access tokens, refresh-cookie recovery, and sign-out handling.
+- [ ] Verify JWT refresh-cookie recovery, protected-route behavior, and role-based access across the migrated analyst routes.
+- [ ] Validate the deployed Python container, Alembic startup, Swagger, authentication, import, audit, review, and ML API workflow end to end.

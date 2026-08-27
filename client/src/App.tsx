@@ -6,6 +6,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import NotFound from "./pages/NotFound";
+import FastApiWorkspace from "./pages/FastApiWorkspace";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AlertQueue = lazy(() => import("./pages/AlertQueue"));
@@ -21,13 +22,13 @@ function Workspace({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return <Switch>
-    <Route path="/"><Workspace><Dashboard /></Workspace></Route>
-    <Route path="/alerts"><Workspace><AlertQueue /></Workspace></Route>
-    <Route path="/alerts/:id"><Workspace><AlertCase /></Workspace></Route>
-    <Route path="/projects"><Workspace><Projects /></Workspace></Route>
-    <Route path="/imports"><Workspace><Imports /></Workspace></Route>
-    <Route path="/allocation"><Workspace><AllocationContext /></Workspace></Route>
-    <Route path="/allocation/:id"><Workspace><AllocationCase /></Workspace></Route>
+    <Route path="/" component={FastApiWorkspace} />
+    <Route path="/alerts" component={FastApiWorkspace} />
+    <Route path="/alerts/:id" component={FastApiWorkspace} />
+    <Route path="/projects" component={FastApiWorkspace} />
+    <Route path="/imports" component={FastApiWorkspace} />
+    <Route path="/allocation" component={FastApiWorkspace} />
+    <Route path="/allocation/:id" component={FastApiWorkspace} />
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />
   </Switch>;

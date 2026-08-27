@@ -1,0 +1,21 @@
+import os
+os.environ.setdefault("POSTGRESQL_URL", "postgresql+asyncpg://postgres:postgres@localhost/postgres")
+os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
+from fastapi.testclient import TestClient
+from app.main import app, parse_project_csv
+
+def test_health_and_docs_are_exposed():
+    client = TestClient(app)
+    assert client.get("/api/v1/health").status_code == 200
+    assert client.get("/api/v1/ready").json()["database"] == "postgresql"
+    openapi = client.get("/api/v1/openapi.json").json()
+    assert "/api/v1/auth/login" in openapi["paths"]
+    assert "/api/v1/auth/bootstrap-admin" in openapi["paths"]
+    assert "/api/v1/audits/run" in openapi["paths"]
+
+
+def test_csv_parser_reports_duplicate_project_codes_without_accepting_them():
+    content = b"project_code,title,category,state,district,locality,vendor_name,financial_year,sanctioned_amount,actual_expenditure,sanction_date,expected_completion_date,last_update_date,progress_percent,project_status\nMPL-001,Drain,Drainage,Odisha,Cuttack,Naraj,Works Co,2025-26,100000,20000,2025-04-01T00:00:00Z,2025-06-01T00:00:00Z,2025-04-15T00:00:00Z,20,ongoing\nMPL-001,Drain two,Drainage,Odisha,Cuttack,Naraj,Works Co,2025-26,100000,20000,2025-04-01T00:00:00Z,2025-06-01T00:00:00Z,2025-04-15T00:00:00Z,20,ongoing\n"
+    rows, issues = parse_project_csv(content)
+    assert len(rows) == 2
+    assert issues[0]["field"] == "project_code"
