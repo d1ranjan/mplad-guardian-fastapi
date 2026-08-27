@@ -26,3 +26,7 @@ export function formatMoney(value: number) {
 export function humanise(value: string) {
   return value.replaceAll("_", " ");
 }
+
+export function formatSemanticSimilarity(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
+}

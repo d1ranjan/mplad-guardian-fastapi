@@ -55,10 +55,11 @@ When the PostgreSQL `users` table is empty, create the first administrator throu
 | `POST /api/v1/audits/run`, `GET /api/v1/alerts`, `POST /api/v1/alerts/{id}/review` | Persisted audit-run and human-review workflow. |
 | `POST /api/v1/models/numeric-context/train` | Train the explainable scikit-learn numeric-context model. |
 | `POST /api/v1/models/semantic-duplicates/compare` | Run semantic text comparison with a lazy Sentence Transformers model. |
+| `POST /api/v1/allocations/import`, `GET /api/v1/allocations`, `GET /api/v1/allocations/{score_id}` | Preserve the official allocation CSV with provenance, create a peer-context model, and retrieve the dashboard or a state-peer case view. |
 
 ## ML guardrails
 
-The numeric model is an unsupervised `IsolationForest` used to identify unusual patterns in sanctioned amount, expenditure, progress, planned duration, and update recency. Its score is labeled **review context**, never a probability of fraud. The semantic service uses `all-MiniLM-L6-v2` to compare project language; a high cosine similarity only produces a candidate and must be corroborated by category, location, date, source record, and human review.
+The numeric model is an unsupervised `IsolationForest` used to identify unusual patterns in sanctioned amount, expenditure, progress, planned duration, and update recency. Its score is labeled **review context**, never a probability of fraud. The semantic service uses `all-MiniLM-L6-v2` to compare project language; a high cosine similarity only produces a candidate and must be corroborated by category, location, date, source record, and human review. The official allocation model uses a state peer median with national fallback. It preserves the public-source checksum and explains allocation variance, but does not assess an individual or establish irregularity.
 
 The model service needs at least 20 approved project records. A predictive fraud classifier must not be claimed without historically verified outcome labels, temporal/geographic holdout evaluation, calibration checks, and formal governance.
 

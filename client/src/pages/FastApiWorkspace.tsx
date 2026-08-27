@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, BarChart3, ClipboardCheck, Database, FileUp, LogIn, ShieldCheck, UserPlus } from "lucide-react";
+import { AlertTriangle, BarChart3, BrainCircuit, ClipboardCheck, Database, FileUp, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { Link, useLocation, useRoute } from "wouter";
 import { API_BASE_URL, apiDocsUrl } from "@/lib/api";
 import { GuardianAlert, GuardianProject, GuardianUser, guardianRequest } from "@/lib/guardianApi";
-import { AlertsView, DashboardView, ImportsView, ProjectsView } from "./FastApiViews";
+import { AlertsView, DashboardView, ImportsView, ModelsView, ProjectsView } from "./FastApiViews";
 import { AlertCaseView, AllocationCaseView, AllocationView } from "./FastApiCases";
 
 export default function FastApiWorkspace() {
@@ -102,7 +102,7 @@ function AccessForm({ mode, setMode, name, email, password, setName, setEmail, s
 }
 
 function Navigation({ path }: { path: string }) {
-  const links = [["/", "Overview", BarChart3], ["/projects", "Projects", Database], ["/imports", "Imports", FileUp], ["/alerts", "Alerts", AlertTriangle], ["/allocation", "Allocation context", ClipboardCheck]] as const;
+  const links = [["/", "Overview", BarChart3], ["/projects", "Projects", Database], ["/imports", "Imports", FileUp], ["/alerts", "Alerts", AlertTriangle], ["/allocation", "Allocation context", ClipboardCheck], ["/models", "Model operations", BrainCircuit]] as const;
   return <nav className="mb-6 flex gap-2 overflow-x-auto pb-1">{links.map(([href, text, Icon]) => <Link key={href} href={href} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${path === href || (href !== "/" && path.startsWith(href)) ? "bg-[#102f4c] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}><Icon className="h-4 w-4" />{text}</Link>)}</nav>;
 }
 
@@ -113,5 +113,6 @@ function WorkspaceRoute({ path, alertId, allocationId, token, user, projects, al
   if (path === "/imports") return <ImportsView token={token} user={user} onHydrate={onHydrate} setStatus={setStatus} />;
   if (path === "/alerts") return <AlertsView alerts={alerts} />;
   if (path === "/allocation") return <AllocationView token={token} user={user} />;
+  if (path === "/models") return <ModelsView token={token} user={user} projects={projects} />;
   return <DashboardView user={user} projects={projects} alerts={alerts} busy={busy} onRunAudit={onRunAudit} />;
 }

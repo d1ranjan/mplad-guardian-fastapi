@@ -29,6 +29,7 @@ function Router() {
     <Route path="/imports" component={FastApiWorkspace} />
     <Route path="/allocation" component={FastApiWorkspace} />
     <Route path="/allocation/:id" component={FastApiWorkspace} />
+    <Route path="/models" component={FastApiWorkspace} />
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />
   </Switch>;

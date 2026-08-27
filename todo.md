@@ -36,7 +36,7 @@
 - [x] Convert the React analyst workspace from tRPC to the FastAPI REST contract and JWT session flow.
 - [x] Add the Python runtime deployment configuration, user-bootstrap process, API/ML tests, migration documentation, and production validation.
 - [x] Add FastAPI CSV upload, persistent import provenance, complete per-row validation reporting, and detailed alert-case endpoints.
-- [ ] Implement FastAPI-backed route parity for alert detail, projects, imports, and allocation views with in-memory JWT access tokens, refresh-cookie recovery, and sign-out handling.
+- [x] Implement FastAPI-backed route parity for alert detail, projects, imports, and allocation views with in-memory JWT access tokens, refresh-cookie recovery, and sign-out handling.
 - [ ] Verify JWT refresh-cookie recovery, protected-route behavior, and role-based access across the migrated analyst routes.
 - [ ] Validate the deployed Python container, Alembic startup, Swagger, authentication, import, audit, review, and ML API workflow end to end.
 - [x] Prepare Render Blueprint configuration, production start command, health check, and environment-variable documentation for the FastAPI service.
@@ -50,6 +50,8 @@
 - [x] Inspect and resolve the latest Render deployment failure after runtime variables were supplied.
 - [x] Replace the Render database setting with the Supabase Session Pooler URI because the direct Supabase database host is not reachable from the Render container.
 - [ ] Add route-aware FastAPI workspace navigation for projects, imports, alert cases, allocation context, and model operations.
-- [ ] Add FastAPI allocation-context storage, provenance, migration, and read endpoints for the official MPLADS allocation export.
-- [ ] Add client-side alert-case loading and reviewer-action submission against the FastAPI REST API.
-- [ ] Add CSV validation preview before FastAPI import submission, with a clear issue report.
+- [x] Add FastAPI allocation-context storage, provenance, migration, and read endpoints for the official MPLADS allocation export.
+- [x] Add client-side alert-case loading and reviewer-action submission against the FastAPI REST API.
+- [x] Add CSV validation preview before FastAPI import submission, with a clear issue report.
+- [ ] Add a dedicated FastAPI model-operations page for numeric-context training and semantic duplicate comparison.
+- [ ] Verify the FastAPI model-operations workflow end to end with valid reviewer-authorized project data before closing the route-parity task.
