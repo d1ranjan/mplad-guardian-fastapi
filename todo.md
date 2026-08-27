@@ -39,3 +39,10 @@
 - [ ] Implement FastAPI-backed route parity for alert detail, projects, imports, and allocation views with in-memory JWT access tokens, refresh-cookie recovery, and sign-out handling.
 - [ ] Verify JWT refresh-cookie recovery, protected-route behavior, and role-based access across the migrated analyst routes.
 - [ ] Validate the deployed Python container, Alembic startup, Swagger, authentication, import, audit, review, and ML API workflow end to end.
+- [ ] Prepare Render Blueprint configuration, production start command, health check, and environment-variable documentation for the FastAPI service.
+- [ ] Create or connect the Render backend service and configure PostgreSQL, JWT, CORS, and model settings securely.
+- [ ] Point the Manus-hosted React application to the Render API URL and restrict CORS to the frontend domain.
+- [ ] Verify the public Render health and Swagger endpoints plus authentication and protected API behavior.
+- [ ] Checkpoint the external-backend frontend integration and document operation of the deployed split architecture.
+- [ ] Push the complete FastAPI/PostgreSQL source to the exact GitHub repository connected to the Render MPLAD project.
+- [ ] Replace the current Render container startup path, which is serving the legacy Node frontend proxy while FastAPI is unavailable at `127.0.0.1:8001`, with a direct FastAPI deployment configuration.

@@ -285,7 +285,7 @@ async def login(payload: LoginRequest, response: Response, session: AsyncSession
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
     access = issue_token(user, settings.access_token_minutes)
     refresh = issue_token(user, settings.refresh_token_days * 24 * 60)
-    response.set_cookie("guardian_refresh", refresh, httponly=True, secure=True, samesite="lax", max_age=settings.refresh_token_days * 86400, path="/api/v1/auth")
+    response.set_cookie("guardian_refresh", refresh, httponly=True, secure=True, samesite="none", max_age=settings.refresh_token_days * 86400, path="/api/v1/auth")
     return {"access_token": access, "token_type": "bearer", "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role}}
 
 
