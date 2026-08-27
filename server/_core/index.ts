@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
-import { createServer } from "http";
+import { createServer, request as proxyRequest } from "http";
+import { spawn } from "child_process";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -31,6 +32,29 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  const fastApiPort = process.env.FASTAPI_INTERNAL_PORT || "8001";
+
+  if (process.env.NODE_ENV === "production") {
+    const apiProcess = spawn("sh", ["-c", `cd backend && alembic upgrade head && uvicorn app.main:app --host 127.0.0.1 --port ${fastApiPort}`], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: "inherit",
+    });
+    apiProcess.on("exit", code => console.error(`[FastAPI] Process exited with code ${code ?? "unknown"}.`));
+    process.on("SIGTERM", () => apiProcess.kill("SIGTERM"));
+    process.on("SIGINT", () => apiProcess.kill("SIGINT"));
+  }
+
+  app.use("/api/v1", (req, res) => {
+    const proxied = proxyRequest({ hostname: "127.0.0.1", port: Number(fastApiPort), method: req.method, path: req.originalUrl, headers: { ...req.headers, host: `127.0.0.1:${fastApiPort}` } }, upstream => {
+      res.writeHead(upstream.statusCode ?? 502, upstream.headers);
+      upstream.pipe(res);
+    });
+    proxied.on("error", error => {
+      if (!res.headersSent) res.status(503).json({ detail: "FastAPI service is starting or unavailable.", error: error.message });
+    });
+    req.pipe(proxied);
+  });
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

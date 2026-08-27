@@ -9,4 +9,4 @@ RUN npm install -g corepack@latest \
     && python3 -m pip install --break-system-packages --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r backend/requirements.txt
 ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["sh", "-c", "cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-3000}"]
+CMD ["node", "dist/index.js"]
