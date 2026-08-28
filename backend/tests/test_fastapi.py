@@ -35,10 +35,20 @@ def test_csv_parser_reports_duplicate_project_codes_without_accepting_them():
 def test_official_allocation_parser_reads_expected_columns_and_currency_values():
     header = "\ufeff\"Sr. No.\",State,Hon'ble Members of Parliaments,Constituency,Allocated AMOUNT ( ₹ )\n"
     records = "".join(f"{index},Odisha,Example MP {index},Example Constituency {index},\"1,000\"\n" for index in range(1, 21))
-    rows = parse_official_allocation_csv((header + records).encode())
+    rows, skipped_rows = parse_official_allocation_csv((header + records).encode())
     assert len(rows) == 20
+    assert skipped_rows == []
     assert rows[0]["state"] == "Odisha"
     assert rows[0]["allocated_amount"] == 1000.0
+
+
+def test_official_allocation_parser_accepts_normalised_official_column_names():
+    header = "Serial Number,State Name,Member of Parliament,Constituency Name,Allocated Amount\n"
+    records = "".join(f"{index},Odisha,Example MP {index},Example Constituency {index},147000000\n" for index in range(1, 21))
+    rows, skipped_rows = parse_official_allocation_csv((header + records).encode())
+    assert len(rows) == 20
+    assert skipped_rows == []
+    assert rows[0]["mp_name"] == "Example MP 1"
 
 
 def test_text_overlap_identifies_related_project_language_without_claiming_a_duplicate():

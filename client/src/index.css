@@ -671,3 +671,14 @@ html, body, #root { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip
   .quark-workflow-page .portal-view-stack, .quark-workflow-page .portal-card, .quark-workflow-page .portal-import-card, .quark-workflow-page .portal-model-grid, .quark-workflow-page .portal-team-grid { width: 100%; min-width: 0; }
   .quark-workflow-page .portal-card-pad, .quark-workflow-page .portal-import-card { padding-left: 20px; padding-right: 20px; }
 }
+
+.quark-contact-page { min-height: calc(100vh - 280px); padding: 70px 0 85px; background: #f4f7fa; }
+.quark-contact-page-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.quark-contact-page-grid article { display: grid; align-content: start; gap: 14px; min-height: 270px; border: 1px solid #e0e5e9; border-top: 4px solid #123b63; background: #fff; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,.04); }
+.quark-contact-page-grid article > svg { width: 34px; height: 34px; color: #b47b0a; }
+.quark-contact-page-grid h2 { margin: 0; color: #123b63; font-family: "Newsreader", Georgia, serif; font-size: 26px; }
+.quark-contact-page-grid p { margin: 0; color: #5b6570; font-size: 14px; line-height: 1.75; }
+.quark-contact-page-grid .quark-view-all-btn { width: fit-content; margin-top: auto; }
+.quark-allocation-import-actions { display: grid; align-items: start; gap: 14px; margin-top: 18px; }
+.quark-allocation-import-actions .quark-file-field { margin: 0; }
+@media (max-width: 900px) { .quark-contact-page-grid { grid-template-columns: 1fr; } }

@@ -3,12 +3,12 @@ import { Accessibility, AlertTriangle, ArrowRight, BarChart3, BrainCircuit, Chev
 import { Link, useLocation, useRoute } from "wouter";
 import { API_BASE_URL, apiDocsUrl } from "@/lib/api";
 import { GuardianAlert, GuardianProject, GuardianUser, guardianRequest } from "@/lib/guardianApi";
-import { AlertsView, DashboardView, ImportsView, ModelsView, ProjectsView } from "./FastApiViews";
+import { AlertsView, DashboardView, ImportsView, ModelsView, ProjectsView, QuarkWorkflowHeading } from "./FastApiViews";
 import { AlertCaseView, AllocationCaseView, AllocationView } from "./FastApiCases";
 import { TeamView } from "./FastApiTeam";
 
 export default function FastApiWorkspace() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [, alertParams] = useRoute("/alerts/:id");
   const [, allocationParams] = useRoute("/allocation/:id");
   const [token, setToken] = useState("");
@@ -100,6 +100,7 @@ export default function FastApiWorkspace() {
       if (mode === "bootstrap") await guardianRequest("/auth/bootstrap-admin", undefined, { method: "POST", body: JSON.stringify({ name, email, password }) });
       const result = await guardianRequest<{ access_token: string }>("/auth/login", undefined, { method: "POST", body: JSON.stringify({ email, password }) });
       await hydrate(result.access_token);
+      navigate("/projects");
       setStatus("Authenticated successfully.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Authentication failed.");
@@ -127,7 +128,8 @@ export default function FastApiWorkspace() {
   };
 
   const isWorkspaceRoute = ["/projects", "/imports", "/alerts", "/allocation", "/models", "/team"].some(route => location === route || location.startsWith(`${route}/`));
-  const isGuestRoute = !user || !isWorkspaceRoute && location === "/";
+  const isContactRoute = location === "/contact";
+  const isGuestRoute = !user && !isContactRoute;
 
   return <div className="quark-site-shell min-h-screen">
     <QuarkSplash visible={showIntro} stage={introStage} />
@@ -135,7 +137,7 @@ export default function FastApiWorkspace() {
     <QuarkHeader user={user} signOut={signOut} />
     <QuarkNavigation path={location} user={user} />
     <main id="main-content">
-      {isGuestRoute ? <PublicHome {...{ user, status, mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }} /> : <div className="quark-workspace" key={location}><WorkspaceRoute path={location} alertId={alertParams?.id} allocationId={allocationParams?.id} token={token} user={user!} projects={projects} alerts={alerts} busy={busy} onRunAudit={runAudit} onHydrate={() => hydrate(token)} setStatus={setStatus} /></div>}
+      {isContactRoute ? <ContactPage /> : isGuestRoute ? <PublicHome {...{ user, status, mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }} /> : <div className="quark-workspace" key={location}><WorkspaceRoute path={location} alertId={alertParams?.id} allocationId={allocationParams?.id} token={token} user={user!} projects={projects} alerts={alerts} busy={busy} onRunAudit={runAudit} onHydrate={() => hydrate(token)} setStatus={setStatus} /></div>}
     </main>
     <QuarkFooter />
   </div>;
@@ -161,7 +163,7 @@ function QuarkNavigation({ path, user }: { path: string; user: GuardianUser | nu
     <li><Link href={user ? "/models" : "/#risk-detection"} onClick={close} className={path === "/models" ? "active" : ""}>AI Risk Detection</Link></li>
     <li><Link href={user ? "/allocation" : "/#analytics"} onClick={close} className={path === "/allocation" ? "active" : ""}>Analytics</Link></li>
     <li><Link href={user ? "/alerts" : "/#reports"} onClick={close} className={path.startsWith("/alerts") ? "active" : ""}>Reports</Link></li>
-    <li><a href="#contact" onClick={close}>Contact</a></li>
+    <li><Link href="/contact" onClick={close} className={path === "/contact" ? "active" : ""}>Contact</Link></li>
   </ul></div></nav>;
 }
 
@@ -186,6 +188,8 @@ function AccessForm({ mode, setMode, name, email, password, setName, setEmail, s
   return <form id="secure-access" onSubmit={authenticate} className="quark-login-card"><div className="quark-login-tabs"><button type="button" onClick={() => setMode("login")} className={mode === "login" ? "active" : ""}>Sign in</button><button type="button" onClick={() => setMode("bootstrap")} className={mode === "bootstrap" ? "active" : ""}>First administrator</button></div><h3>{mode === "bootstrap" ? "Initialize secure access" : "Analyst sign in"}</h3><p>{mode === "bootstrap" ? "One-time PostgreSQL administrator setup." : "Use your assigned JWT-backed analyst account."}</p>{mode === "bootstrap" && field("Full name", "text", name, setName)}{field("Email", "email", email, setEmail)}{field("Password", "password", password, setPassword, 12)}<button disabled={busy} className="quark-login-submit">{mode === "bootstrap" ? <UserPlus /> : <LogIn />}{busy ? "Working…" : mode === "bootstrap" ? "Create administrator" : "Sign in"}</button></form>;
 }
 
+function ContactPage() { return <section className="quark-contact-page"><div className="quark-container"><QuarkWorkflowHeading label="MPLAD Guardian support" title="Contact & Help" text="Use the appropriate channel for platform access, technical questions, responsible-use guidance, or official MPLADS information." /><div className="quark-contact-page-grid"><article><ShieldCheck /><h2>Secure workspace access</h2><p>For an analyst account, role change, or access concern, contact your designated MPLAD Guardian administrator. Never send a password or access token through a public channel.</p><Link href="/#secure-access" className="quark-view-all-btn">Go to secure access</Link></article><article><FileText /><h2>Technical support</h2><p>Report a reproducible platform issue, including a screenshot and the action you performed, through the project issue tracker. Do not attach sensitive project records.</p><a href="https://github.com/d1ranjan/mplad-guardian-fastapi/issues" target="_blank" rel="noreferrer" className="quark-view-all-btn">Open issue tracker</a></article><article><Globe2 /><h2>Official MPLADS information</h2><p>For programme-level allocation information and official releases, consult the public MPLADS dashboard maintained by the Government of India.</p><a href="https://mplads.mospi.gov.in/digigov/dashboard.html" target="_blank" rel="noreferrer" className="quark-view-all-btn">Open MPLADS dashboard</a></article></div></div></section>; }
+
 function FeatureCard({ icon, title, text, href }: { icon: React.ReactNode; title: string; text: string; href: string }) { return <Link href={href} className="quark-service-card"><span className="quark-service-icon">{icon}</span><h3>{title}</h3><p>{text}</p><span>Open service <ArrowRight /></span></Link>; }
 function Persona({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) { return <div className="quark-persona-card"><span className="quark-persona-icon">{icon}</span><h3>{title}</h3><p>{text}</p></div>; }
 function Stat({ label, value }: { label: string; value: string }) { return <div className="quark-stat-card"><strong>{value}</strong><span>{label}</span></div>; }
@@ -195,7 +199,7 @@ function SectionHeading({ label, title, text, inverse = false }: { label: string
 
 function QuarkSplash({ visible, stage }: { visible: boolean; stage: number }) { return visible ? <div className={`quark-splash ${stage === 4 ? "quark-splash-exit" : ""}`} aria-hidden="true"><div className={`quark-splash-content stage-${stage}`}><div className="quark-splash-emblem"><Landmark /></div><div className="quark-splash-text"><span>Government of India</span><strong>MPLAD</strong><span>Guardian</span></div></div></div> : null; }
 
-function QuarkFooter() { return <footer className="quark-footer"><div className="quark-container quark-footer-grid"><div><h3>MPLAD Guardian</h3><p>Evidence-led audit intelligence for accountable public-project review. Review signals are not findings of fraud or wrongdoing.</p></div><div><h4>Important links</h4><a href="/#introduction">About the platform</a><a href="/#risk-detection">Responsible AI use</a><a href="/#secure-access">Secure access</a></div><div><h4>Government resources</h4><a href="https://mplads.mospi.gov.in/digigov/dashboard.html" target="_blank" rel="noreferrer">MPLADS dashboard</a><a href={apiDocsUrl()} target="_blank" rel="noreferrer">API documentation</a></div></div><div className="quark-footer-bottom">© MPLAD Guardian · SIH26102 audit-intelligence project</div></footer>; }
+function QuarkFooter() { return <footer className="quark-footer"><div className="quark-container quark-footer-grid"><div><h3>MPLAD Guardian</h3><p>Evidence-led audit intelligence for accountable public-project review. Review signals are not findings of fraud or wrongdoing.</p></div><div><h4>Important links</h4><a href="/#introduction">About the platform</a><a href="/#risk-detection">Responsible AI use</a><Link href="/contact">Contact &amp; help</Link></div><div><h4>Government resources</h4><a href="https://mplads.mospi.gov.in/digigov/dashboard.html" target="_blank" rel="noreferrer">MPLADS dashboard</a><a href={apiDocsUrl()} target="_blank" rel="noreferrer">API documentation</a></div></div><div className="quark-footer-bottom">© MPLAD Guardian · SIH26102 audit-intelligence project</div></footer>; }
 
 function WorkspaceRoute({ path, alertId, allocationId, token, user, projects, alerts, busy, onRunAudit, onHydrate, setStatus }: { path: string; alertId?: string; allocationId?: string; token: string; user: GuardianUser; projects: GuardianProject[]; alerts: GuardianAlert[]; busy: boolean; onRunAudit: () => Promise<void>; onHydrate: () => Promise<void>; setStatus: (value: string) => void }) {
   const frame = (kind: string, content: React.ReactNode) => <div className={`quark-workflow-page ${kind}`}>{content}</div>;

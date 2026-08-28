@@ -31,6 +31,7 @@ function Router() {
     <Route path="/allocation/:id" component={FastApiWorkspace} />
     <Route path="/models" component={FastApiWorkspace} />
     <Route path="/team" component={FastApiWorkspace} />
+    <Route path="/contact" component={FastApiWorkspace} />
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />
   </Switch>;

@@ -263,6 +263,18 @@ class DuplicateCompareInput(BaseModel):
 
 REQUIRED_CSV_HEADERS = {"project_code", "title", "category", "state", "district", "locality", "vendor_name", "financial_year", "sanctioned_amount", "actual_expenditure", "sanction_date", "expected_completion_date", "last_update_date", "progress_percent", "project_status"}
 OFFICIAL_ALLOCATION_HEADERS = {"State", "Hon'ble Members of Parliaments", "Constituency", "Allocated AMOUNT ( ₹ )"}
+OFFICIAL_ALLOCATION_HEADER_ALIASES = {
+    "state": "state",
+    "statename": "state",
+    "honblemembersofparliaments": "mp_name",
+    "honblemembersofparliament": "mp_name",
+    "memberofparliament": "mp_name",
+    "membersofparliament": "mp_name",
+    "constituency": "constituency",
+    "constituencyname": "constituency",
+    "allocatedamount": "allocated_amount",
+    "allocatedamountinr": "allocated_amount",
+}
 OFFICIAL_ALLOCATION_SOURCE_URL = "https://mplads.mospi.gov.in/digigov/dashboard.html"
 OFFICIAL_ALLOCATION_SOURCE_SCOPE = "18th Lok Sabha public dashboard allocation export; state, MP, constituency, and allocated amount."
 
@@ -306,35 +318,36 @@ def validate_project_csv_rows(rows: list[dict[str, str]], issues: list[dict[str,
     return report
 
 
-def parse_official_allocation_csv(content: bytes) -> list[dict[str, str | float | int]]:
+def parse_official_allocation_csv(content: bytes) -> tuple[list[dict[str, str | float | int]], list[dict[str, str | int]]]:
     try:
         reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=422, detail="Official allocation CSV must use UTF-8 encoding.") from exc
-    headers = set(reader.fieldnames or [])
-    missing = sorted(OFFICIAL_ALLOCATION_HEADERS - headers)
+    header_map = {OFFICIAL_ALLOCATION_HEADER_ALIASES.get(re.sub(r"[^a-z0-9]+", "", header.lower())): header for header in (reader.fieldnames or []) if OFFICIAL_ALLOCATION_HEADER_ALIASES.get(re.sub(r"[^a-z0-9]+", "", header.lower()))}
+    missing = sorted({"state", "mp_name", "constituency", "allocated_amount"} - set(header_map))
     if missing:
-        raise HTTPException(status_code=422, detail={"message": "This is not the expected official allocation export.", "missing_headers": missing})
+        raise HTTPException(status_code=422, detail={"message": "This is not the expected official allocation export. Expected State, MP, Constituency, and Allocated Amount columns.", "missing_headers": missing})
     parsed: list[dict[str, str | float | int]] = []
-    issues: list[dict[str, str | int]] = []
+    skipped_rows: list[dict[str, str | int]] = []
     for row_number, row in enumerate(reader, start=2):
-        state = (row.get("State") or "").strip()
-        mp_name = (row.get("Hon'ble Members of Parliaments") or "").strip()
-        constituency = (row.get("Constituency") or "").strip()
-        amount_text = (row.get("Allocated AMOUNT ( ₹ )") or "").replace(",", "").replace("₹", "").strip()
+        state = (row.get(header_map["state"]) or "").strip()
+        mp_name = (row.get(header_map["mp_name"]) or "").strip()
+        constituency = (row.get(header_map["constituency"]) or "").strip()
+        amount_text = (row.get(header_map["allocated_amount"]) or "").replace(",", "").replace("₹", "").strip()
         try:
             amount = float(amount_text)
         except ValueError:
             amount = -1
+        if state.casefold() in {"grand total", "total"}:
+            skipped_rows.append({"row": row_number, "message": "Summary footer excluded from allocation records."})
+            continue
         if not state or not mp_name or not constituency or amount < 0:
-            issues.append({"row": row_number, "message": "State, MP name, constituency, and a non-negative allocated amount are required."})
+            skipped_rows.append({"row": row_number, "message": "Incomplete official source row excluded because a state, MP, constituency, or allocated amount is missing."})
             continue
         parsed.append({"source_row_number": row_number, "state": state, "mp_name": mp_name, "constituency": constituency, "allocated_amount": amount})
-    if issues:
-        raise HTTPException(status_code=422, detail={"message": "Official allocation CSV has invalid records.", "issues": issues[:100]})
     if len(parsed) < 20:
         raise HTTPException(status_code=422, detail="At least 20 official allocation records are required for peer-context analysis.")
-    return parsed
+    return parsed, skipped_rows
 
 
 def median(values: list[float]) -> float:
@@ -596,20 +609,25 @@ async def import_official_allocations(file: UploadFile = File(...), session: Asy
     content = await file.read()
     if len(content) > 5_000_000:
         raise HTTPException(status_code=413, detail="CSV files are limited to 5 MB.")
-    records = parse_official_allocation_csv(content)
+    records, skipped_rows = parse_official_allocation_csv(content)
     digest = sha256(content).hexdigest()
     existing = await session.scalar(select(OfficialAllocationImport).where(OfficialAllocationImport.source_sha256 == digest))
     if existing:
         existing_model = await session.scalar(select(AllocationModelRun).where(AllocationModelRun.source_import_id == existing.id).order_by(AllocationModelRun.completed_at.desc()))
-        return {"import_id": existing.id, "model_code": existing_model.model_code if existing_model else None, "row_count": existing.row_count, "message": "This official source export is already preserved."}
-    imported = OfficialAllocationImport(original_filename=file.filename, source_url=OFFICIAL_ALLOCATION_SOURCE_URL, source_scope=OFFICIAL_ALLOCATION_SOURCE_SCOPE, source_sha256=digest, retrieved_at=datetime.now(timezone.utc), row_count=len(records))
+        if not existing_model:
+            existing_model = await train_allocation_context_model(session, existing)
+            await session.commit()
+            return {"import_id": existing.id, "model_code": existing_model.model_code, "row_count": existing.row_count, "message": "The preserved official source did not have a context model, so a new peer-context model was created."}
+        return {"import_id": existing.id, "model_code": existing_model.model_code, "row_count": existing.row_count, "message": "This official source export and its peer-context model are already preserved."}
+    source_scope = OFFICIAL_ALLOCATION_SOURCE_SCOPE if not skipped_rows else f"{OFFICIAL_ALLOCATION_SOURCE_SCOPE} {len(skipped_rows)} incomplete or summary row(s) were excluded from modelling and retained in source-file provenance."
+    imported = OfficialAllocationImport(original_filename=file.filename, source_url=OFFICIAL_ALLOCATION_SOURCE_URL, source_scope=source_scope, source_sha256=digest, retrieved_at=datetime.now(timezone.utc), row_count=len(records))
     session.add(imported)
     await session.flush()
     session.add_all([OfficialAllocationRecord(source_import_id=imported.id, **record) for record in records])
     await session.flush()
     model = await train_allocation_context_model(session, imported)
     await session.commit()
-    return {"import_id": imported.id, "model_code": model.model_code, "row_count": imported.row_count, "message": "Official allocation provenance and peer-context model were persisted."}
+    return {"import_id": imported.id, "model_code": model.model_code, "row_count": imported.row_count, "skipped_rows": skipped_rows, "message": f"Official allocation provenance and peer-context model were persisted from {imported.row_count} valid rows; {len(skipped_rows)} incomplete or summary row(s) were excluded."}
 
 
 @app.get("/api/v1/allocations", tags=["Official allocation context"])
