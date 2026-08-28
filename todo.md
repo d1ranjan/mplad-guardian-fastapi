@@ -85,6 +85,7 @@
 - [x] Diagnose and restore the Render API deployment so authenticated frontend workflows no longer fail with a browser fetch error.
 - [ ] Fix the mobile workspace viewport and responsive sizing so authenticated screens do not leave a blank right-side gap.
 - [ ] Redirect a successfully authenticated analyst from the public home to the secure workspace overview.
-- [ ] Add a real Contact route and contact-content page rather than only a homepage navigation anchor.
-- [ ] Support the supplied official allocated-limit CSV column structure in the allocation import parser and frontend validation.
-- [ ] Create and surface the official allocation-context model immediately after a successful authorised source import.
+- [x] Add a real Contact route and contact-content page rather than only a homepage navigation anchor.
+- [x] Support the supplied official allocated-limit CSV column structure in the allocation import parser and frontend validation.
+- [x] Implement and surface the official allocation-context model immediately after a successful authorised source import.
+- [ ] Verify the allocation-context model appears immediately after an authorised official-source import in the deployed browser.

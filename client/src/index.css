@@ -682,3 +682,8 @@ html, body, #root { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip
 .quark-allocation-import-actions { display: grid; align-items: start; gap: 14px; margin-top: 18px; }
 .quark-allocation-import-actions .quark-file-field { margin: 0; }
 @media (max-width: 900px) { .quark-contact-page-grid { grid-template-columns: 1fr; } }
+
+.quark-import-success{display:flex;align-items:center;gap:.65rem;padding:1rem 1.15rem;border:1px solid #b8d6c1;background:#eef8f1;color:#195b34;font-size:.92rem;line-height:1.55}
+.quark-import-success svg{width:1.15rem;height:1.15rem;flex:0 0 auto}
+.quark-import-success strong{margin-left:auto;color:#123f2a}
+@media (max-width:640px){.quark-import-success{align-items:flex-start;flex-wrap:wrap}.quark-import-success strong{width:100%;margin-left:1.8rem}}
