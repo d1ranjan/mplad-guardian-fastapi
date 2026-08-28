@@ -658,3 +658,16 @@
 
 @media (max-width: 860px) { .quark-case-summary-grid, .quark-review-decision-card, .quark-analyst-management-grid { grid-template-columns: 1fr; } .quark-review-decision-card textarea, .quark-review-actions { grid-column: auto; } .quark-allocation-kpis { grid-template-columns: 1fr 1fr; } .quark-allocation-hero { align-items: flex-start; flex-direction: column; } .quark-allocation-hero small { max-width: none; text-align: left; } }
 @media (max-width: 520px) { .quark-workflow-page::before { font-size: 32px; } .quark-workflow-page::after { margin-top: -25px; } .quark-case-evidence-card, .quark-allocation-details-card, .quark-case-context-card, .quark-review-decision-card, .quark-allocation-import-card, .quark-allocation-hero, .quark-interpretation-card, .quark-analyst-form { padding: 20px; } .quark-allocation-import-card { grid-template-columns: 1fr; } .quark-allocation-import-card > span { display: none; } .quark-allocation-kpis { grid-template-columns: 1fr; } .quark-allocation-detail-grid { grid-template-columns: 1fr; } .quark-analyst-row { align-items: flex-start; flex-direction: column; padding: 16px; } .quark-history-row { padding: 15px 20px; } }
+
+/* Keep the authenticated dashboard anchored to the actual visual viewport.
+   This is deliberately separate from the reference dimensions above: mobile
+   webviews must never retain a desktop-sized root beside the workspace. */
+html, body, #root { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip; }
+.quark-site-shell, #main-content, .quark-workspace, .quark-workflow-page { width: 100%; min-width: 0; max-width: 100%; }
+@media (max-width: 768px) {
+  .quark-site-shell { min-width: 0; }
+  .quark-workspace { padding: 30px 0 60px; }
+  .quark-workflow-page::before, .quark-workflow-page::after { margin-left: 20px; margin-right: 20px; }
+  .quark-workflow-page .portal-view-stack, .quark-workflow-page .portal-card, .quark-workflow-page .portal-import-card, .quark-workflow-page .portal-model-grid, .quark-workflow-page .portal-team-grid { width: 100%; min-width: 0; }
+  .quark-workflow-page .portal-card-pad, .quark-workflow-page .portal-import-card { padding-left: 20px; padding-right: 20px; }
+}
