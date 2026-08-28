@@ -23,6 +23,7 @@ function Workspace({ children }: { children: React.ReactNode }) {
 function Router() {
   return <Switch>
     <Route path="/" component={FastApiWorkspace} />
+    <Route path="/dashboard" component={FastApiWorkspace} />
     <Route path="/alerts" component={FastApiWorkspace} />
     <Route path="/alerts/:id" component={FastApiWorkspace} />
     <Route path="/projects" component={FastApiWorkspace} />
