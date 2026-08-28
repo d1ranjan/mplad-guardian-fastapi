@@ -687,3 +687,7 @@ html, body, #root { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip
 .quark-import-success svg{width:1.15rem;height:1.15rem;flex:0 0 auto}
 .quark-import-success strong{margin-left:auto;color:#123f2a}
 @media (max-width:640px){.quark-import-success{align-items:flex-start;flex-wrap:wrap}.quark-import-success strong{width:100%;margin-left:1.8rem}}
+
+.quark-login-field{display:grid;gap:.35rem}
+.quark-login-field input[aria-invalid="true"]{border-color:#b3261e;box-shadow:0 0 0 2px rgba(179,38,30,.12)}
+.quark-field-error{color:#a5221b;font-size:.75rem;line-height:1.4}

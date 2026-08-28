@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Accessibility, AlertTriangle, ArrowRight, BarChart3, BrainCircuit, ChevronDown, ClipboardCheck, Database, FileText, FileUp, Globe2, Landmark, LogIn, Menu, ShieldCheck, UserPlus, Users, X } from "lucide-react";
 import { Link, useLocation, useRoute } from "wouter";
 import { API_BASE_URL, apiDocsUrl } from "@/lib/api";
-import { GuardianAlert, GuardianProject, GuardianUser, guardianRequest } from "@/lib/guardianApi";
+import { GuardianAlert, GuardianProject, GuardianUser, apiErrorDetail, fieldErrorsFromError, guardianRequest } from "@/lib/guardianApi";
 import { AlertsView, DashboardView, ImportsView, ModelsView, ProjectsView, QuarkWorkflowHeading } from "./FastApiViews";
 import { AlertCaseView, AllocationCaseView, AllocationView } from "./FastApiCases";
 import { TeamView } from "./FastApiTeam";
@@ -21,6 +21,7 @@ export default function FastApiWorkspace() {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"login" | "bootstrap">("login");
   const [busy, setBusy] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [introStage, setIntroStage] = useState(1);
   const [showIntro, setShowIntro] = useState(true);
 
@@ -95,6 +96,14 @@ export default function FastApiWorkspace() {
 
   const authenticate = async (event: React.FormEvent) => {
     event.preventDefault();
+    const nextErrors: Record<string, string> = {};
+    if (!email.trim()) nextErrors.email = "Enter your analyst ID or email address.";
+    else if (!email.includes("@")) nextErrors.email = "Enter a valid email address.";
+    if (!password) nextErrors.password = "Enter your password.";
+    else if (password.length < 12) nextErrors.password = "Password must be at least 12 characters.";
+    if (mode === "bootstrap" && !name.trim()) nextErrors.name = "Enter your full name.";
+    if (Object.keys(nextErrors).length) { setFieldErrors(nextErrors); return; }
+    setFieldErrors({});
     setBusy(true);
     try {
       if (mode === "bootstrap") await guardianRequest("/auth/bootstrap-admin", undefined, { method: "POST", body: JSON.stringify({ name, email, password }) });
@@ -103,7 +112,11 @@ export default function FastApiWorkspace() {
       navigate("/dashboard");
       setStatus("Authenticated successfully.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Authentication failed.");
+      const supplied = fieldErrorsFromError(error);
+      const detail = apiErrorDetail(error);
+      const nextErrors = Object.keys(supplied).length ? supplied : ((error as { status?: number }).status === 401 ? { email: "Check the analyst ID or email address.", password: "Check the password and try again." } : {});
+      setFieldErrors(nextErrors);
+      setStatus(detail?.message || (error instanceof Error ? error.message : "Authentication failed."));
     } finally {
       setBusy(false);
     }
@@ -137,7 +150,7 @@ export default function FastApiWorkspace() {
     <QuarkHeader user={user} signOut={signOut} />
     <QuarkNavigation path={location} user={user} />
     <main id="main-content">
-      {isContactRoute ? <ContactPage /> : isGuestRoute ? <PublicHome {...{ user, status, mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }} /> : <div className="quark-workspace" key={location}><WorkspaceRoute path={location} alertId={alertParams?.id} allocationId={allocationParams?.id} token={token} user={user!} projects={projects} alerts={alerts} busy={busy} onRunAudit={runAudit} onHydrate={() => hydrate(token)} setStatus={setStatus} /></div>}
+      {isContactRoute ? <ContactPage /> : isGuestRoute ? <PublicHome {...{ user, status, mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy, fieldErrors }} /> : <div className="quark-workspace" key={location}><WorkspaceRoute path={location} alertId={alertParams?.id} allocationId={allocationParams?.id} token={token} user={user!} projects={projects} alerts={alerts} busy={busy} onRunAudit={runAudit} onHydrate={() => hydrate(token)} setStatus={setStatus} /></div>}
     </main>
     <QuarkFooter />
   </div>;
@@ -167,7 +180,7 @@ function QuarkNavigation({ path, user }: { path: string; user: GuardianUser | nu
   </ul></div></nav>;
 }
 
-function PublicHome({ user, status, mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }: { user: GuardianUser | null; status: string; mode: "login" | "bootstrap"; setMode: (mode: "login" | "bootstrap") => void; name: string; email: string; password: string; setName: (value: string) => void; setEmail: (value: string) => void; setPassword: (value: string) => void; authenticate: (event: React.FormEvent) => Promise<void>; busy: boolean }) {
+function PublicHome({ user, status, mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy, fieldErrors }: { user: GuardianUser | null; status: string; mode: "login" | "bootstrap"; setMode: (mode: "login" | "bootstrap") => void; name: string; email: string; password: string; setName: (value: string) => void; setEmail: (value: string) => void; setPassword: (value: string) => void; authenticate: (event: React.FormEvent) => Promise<void>; busy: boolean; fieldErrors: Record<string, string> }) {
   return <>
     <section className="quark-hero" id="home"><img className="quark-hero-art" src="https://mpladguard-dtzanqrn.manus.space/manus-storage/quark-portal-hero_d968b7fa.png" alt="" /><div className="quark-container quark-hero-content"><span className="quark-gov-badge">Government monitoring platform</span><h1>Transparent Monitoring of MPLAD Projects</h1><p>An intelligent platform for monitoring public-project records, analysing fund utilisation, and surfacing unusual patterns through evidence-led data techniques.</p><div className="quark-hero-buttons">{user ? <Link href="/projects" className="quark-btn quark-btn-primary">Explore Projects</Link> : <a href="#secure-access" className="quark-btn quark-btn-primary">Explore Projects</a>}<a href="#risk-detection" className="quark-btn quark-btn-secondary">View Risk Detection</a></div></div></section>
     <section className="quark-notice-section"><div className="quark-container"><div className="quark-notice"><strong>Service status</strong><span>{status}</span><span className="quark-notice-url">{API_BASE_URL}</span></div></div></section>
@@ -179,13 +192,13 @@ function PublicHome({ user, status, mode, setMode, name, email, password, setNam
     <section className="quark-content-section quark-light" id="analytics"><div className="quark-container"><SectionHeading label="Analytics" title="Review context that stays explainable" text="The authenticated workspace provides current project, alert, allocation, and model-operation views with their source and interpretation boundaries." /><div className="quark-analytics-grid"><div className="quark-chart-card"><h3>Review workflow coverage</h3><Bar label="Import validation" value="100%" width="100%" /><Bar label="Evidence rationale" value="100%" width="100%" /><Bar label="Human action trail" value="100%" width="100%" /></div><div className="quark-chart-card"><h3>Signal interpretation</h3><div className="quark-risk-summary"><div><strong>Context</strong><span>Not proof</span></div><div><strong>Review</strong><span>Required</span></div><div><strong>Evidence</strong><span>Preserved</span></div></div></div></div></div></section>
     <section className="quark-content-section" id="personas"><div className="quark-container"><SectionHeading label="User personas" title="Role-specific access without hidden conclusions" text="Every workspace interaction is designed around authorised human responsibility." /><div className="quark-persona-grid"><Persona icon={<Users />} title="Administrator" text="Manages analysts, authorised imports, audit runs, and model operations." /><Persona icon={<ClipboardCheck />} title="Reviewer" text="Assesses transparent evidence and records an accountable review action." /><Persona icon={<Database />} title="Viewer" text="Consults permitted project context without changing case decisions." /></div></div></section>
     <section className="quark-content-section quark-light" id="reports"><div className="quark-container"><SectionHeading label="Reports & documentation" title="Use the system with its limits in view" text="Supporting guides are included alongside the secured FastAPI workflow." /><div className="quark-report-list"><Report icon={<FileText />} title="User guide" text="Administrator onboarding, import validation, audit review, allocation context, and model interpretation." href="https://github.com/d1ranjan/mplad-guardian-fastapi/blob/main/docs/user-guide.md" /><Report icon={<ClipboardCheck />} title="Presentation runbook" text="A responsible sequence for the fictional presentation dataset and public allocation context." href="https://github.com/d1ranjan/mplad-guardian-fastapi/blob/main/docs/presentation-runbook.md" /><Report icon={<Globe2 />} title="FastAPI OpenAPI documentation" text="Inspect the protected API contract and service endpoints." href={apiDocsUrl()} /></div></div></section>
-    <section className="quark-contact-section" id="contact"><div className="quark-container quark-contact-grid"><div><span className="quark-section-label">Secure analyst access</span><h2>Enter the MPLAD monitoring workspace.</h2><p>Sign in with your assigned analyst credentials. The first-administrator option is available only before an account exists. Never share a password or token in chat.</p></div><AccessForm {...{ mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }} /></div></section>
+    <section className="quark-contact-section" id="contact"><div className="quark-container quark-contact-grid"><div><span className="quark-section-label">Secure analyst access</span><h2>Enter the MPLAD monitoring workspace.</h2><p>Sign in with your assigned analyst credentials. The first-administrator option is available only before an account exists. Never share a password or token in chat.</p></div><AccessForm {...{ mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy, fieldErrors }} /></div></section>
   </>;
 }
 
-function AccessForm({ mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy }: { mode: "login" | "bootstrap"; setMode: (mode: "login" | "bootstrap") => void; name: string; email: string; password: string; setName: (value: string) => void; setEmail: (value: string) => void; setPassword: (value: string) => void; authenticate: (event: React.FormEvent) => Promise<void>; busy: boolean }) {
-  const field = (label: string, type: string, value: string, update: (value: string) => void, minLength?: number) => <label className="quark-login-field">{label}<input type={type} required value={value} minLength={minLength} onChange={event => update(event.target.value)} /></label>;
-  return <form id="secure-access" onSubmit={authenticate} className="quark-login-card"><div className="quark-login-tabs"><button type="button" onClick={() => setMode("login")} className={mode === "login" ? "active" : ""}>Sign in</button><button type="button" onClick={() => setMode("bootstrap")} className={mode === "bootstrap" ? "active" : ""}>First administrator</button></div><h3>{mode === "bootstrap" ? "Initialize secure access" : "Analyst sign in"}</h3><p>{mode === "bootstrap" ? "One-time PostgreSQL administrator setup." : "Use your assigned JWT-backed analyst account."}</p>{mode === "bootstrap" && field("Full name", "text", name, setName)}{field("Email", "email", email, setEmail)}{field("Password", "password", password, setPassword, 12)}<button disabled={busy} className="quark-login-submit">{mode === "bootstrap" ? <UserPlus /> : <LogIn />}{busy ? "Working…" : mode === "bootstrap" ? "Create administrator" : "Sign in"}</button></form>;
+function AccessForm({ mode, setMode, name, email, password, setName, setEmail, setPassword, authenticate, busy, fieldErrors }: { mode: "login" | "bootstrap"; setMode: (mode: "login" | "bootstrap") => void; name: string; email: string; password: string; setName: (value: string) => void; setEmail: (value: string) => void; setPassword: (value: string) => void; authenticate: (event: React.FormEvent) => Promise<void>; busy: boolean; fieldErrors: Record<string, string> }) {
+  const field = (fieldName: string, label: string, type: string, value: string, update: (value: string) => void, minLength?: number) => { const error = fieldErrors[fieldName]; return <label className="quark-login-field"><span>{label}</span><input type={type} required value={value} minLength={minLength} aria-invalid={Boolean(error)} aria-describedby={error ? `${fieldName}-error` : undefined} onChange={event => update(event.target.value)} />{error && <small id={`${fieldName}-error`} className="quark-field-error" role="alert">{error}</small>}</label>; };
+  return <form id="secure-access" noValidate onSubmit={authenticate} className="quark-login-card"><div className="quark-login-tabs"><button type="button" onClick={() => setMode("login")} className={mode === "login" ? "active" : ""}>Sign in</button><button type="button" onClick={() => setMode("bootstrap")} className={mode === "bootstrap" ? "active" : ""}>First administrator</button></div><h3>{mode === "bootstrap" ? "Initialize secure access" : "Analyst sign in"}</h3><p>{mode === "bootstrap" ? "One-time PostgreSQL administrator setup." : "Use your assigned JWT-backed analyst account."}</p>{mode === "bootstrap" && field("name", "Full name", "text", name, setName)}{field("email", "Email", "email", email, setEmail)}{field("password", "Password", "password", password, setPassword, 12)}<button disabled={busy} className="quark-login-submit">{mode === "bootstrap" ? <UserPlus /> : <LogIn />}{busy ? "Working…" : mode === "bootstrap" ? "Create administrator" : "Sign in"}</button></form>;
 }
 
 function ContactPage() { return <section className="quark-contact-page"><div className="quark-container"><QuarkWorkflowHeading label="MPLAD Guardian support" title="Contact & Help" text="Use the appropriate channel for platform access, technical questions, responsible-use guidance, or official MPLADS information." /><div className="quark-contact-page-grid"><article><ShieldCheck /><h2>Secure workspace access</h2><p>For an analyst account, role change, or access concern, contact your designated MPLAD Guardian administrator. Never send a password or access token through a public channel.</p><Link href="/#secure-access" className="quark-view-all-btn">Go to secure access</Link></article><article><FileText /><h2>Technical support</h2><p>Report a reproducible platform issue, including a screenshot and the action you performed, through the project issue tracker. Do not attach sensitive project records.</p><a href="https://github.com/d1ranjan/mplad-guardian-fastapi/issues" target="_blank" rel="noreferrer" className="quark-view-all-btn">Open issue tracker</a></article><article><Globe2 /><h2>Official MPLADS information</h2><p>For programme-level allocation information and official releases, consult the public MPLADS dashboard maintained by the Government of India.</p><a href="https://mplads.mospi.gov.in/digigov/dashboard.html" target="_blank" rel="noreferrer" className="quark-view-all-btn">Open MPLADS dashboard</a></article></div></div></section>; }

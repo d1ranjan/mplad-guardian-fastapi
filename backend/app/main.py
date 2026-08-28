@@ -262,6 +262,18 @@ class DuplicateCompareInput(BaseModel):
 
 
 REQUIRED_CSV_HEADERS = {"project_code", "title", "category", "state", "district", "locality", "vendor_name", "financial_year", "sanctioned_amount", "actual_expenditure", "sanction_date", "expected_completion_date", "last_update_date", "progress_percent", "project_status"}
+PROJECT_HEADER_ALIASES = {
+    "projectid": "project_code", "projectcode": "project_code", "code": "project_code",
+    "projectname": "title", "projecttitle": "title", "name": "title",
+    "projectcategory": "category", "sector": "category", "statename": "state",
+    "districtname": "district", "location": "locality", "village": "locality",
+    "vendor": "vendor_name", "vendorname": "vendor_name", "implementingagency": "vendor_name",
+    "financialyear": "financial_year", "fy": "financial_year", "sanctionedamount": "sanctioned_amount",
+    "sanctionamount": "sanctioned_amount", "actualexpenditure": "actual_expenditure", "expenditure": "actual_expenditure",
+    "sanctiondate": "sanction_date", "expectedcompletiondate": "expected_completion_date", "completiondate": "expected_completion_date",
+    "lastupdatedate": "last_update_date", "updatedate": "last_update_date", "progress": "progress_percent",
+    "progresspercent": "progress_percent", "status": "project_status", "projectstatus": "project_status",
+}
 OFFICIAL_ALLOCATION_HEADERS = {"State", "Hon'ble Members of Parliaments", "Constituency", "Allocated AMOUNT ( ₹ )"}
 OFFICIAL_ALLOCATION_HEADER_ALIASES = {
     "state": "state",
@@ -282,15 +294,15 @@ OFFICIAL_ALLOCATION_SOURCE_SCOPE = "18th Lok Sabha public dashboard allocation e
 def parse_project_csv(content: bytes) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     try:
         reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
-        headers = set(reader.fieldnames or [])
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=422, detail="CSV must use UTF-8 encoding.") from exc
     if not reader.fieldnames:
         raise HTTPException(status_code=422, detail="CSV must contain a header row.")
-    missing = sorted(REQUIRED_CSV_HEADERS - headers)
+    header_map = {PROJECT_HEADER_ALIASES.get(re.sub(r"[^a-z0-9]+", "", header.lower()), header): header for header in reader.fieldnames}
+    missing = sorted(REQUIRED_CSV_HEADERS - set(header_map))
     if missing:
-        raise HTTPException(status_code=422, detail={"message": "Required columns are missing.", "missing_headers": missing})
-    rows = list(reader)
+        raise HTTPException(status_code=422, detail={"message": "Required columns are missing after header normalization.", "missing_headers": missing, "received_headers": reader.fieldnames})
+    rows = [{canonical: (record.get(original) or "").strip() for canonical, original in header_map.items() if canonical in REQUIRED_CSV_HEADERS} for record in reader]
     issues: list[dict[str, str]] = []
     seen: set[str] = set()
     for number, record in enumerate(rows, start=2):
@@ -456,7 +468,7 @@ async def ready(session: AsyncSession = Depends(db)):
 async def login(payload: LoginRequest, response: Response, session: AsyncSession = Depends(db)):
     user = await session.scalar(select(User).where(User.email == payload.email.lower()))
     if not user or not passwords.verify(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"message": "Invalid email or password.", "field_errors": {"email": "Check the analyst ID or email address.", "password": "Check the password and try again."}})
     access = issue_token(user, settings.access_token_minutes)
     refresh = issue_token(user, settings.refresh_token_days * 24 * 60)
     response.set_cookie("guardian_refresh", refresh, httponly=True, secure=True, samesite="none", max_age=settings.refresh_token_days * 86400, path="/api/v1/auth")
@@ -467,7 +479,7 @@ async def login(payload: LoginRequest, response: Response, session: AsyncSession
 async def bootstrap_admin(payload: BootstrapAdminRequest, session: AsyncSession = Depends(db)):
     existing = await session.scalar(select(User.id).limit(1))
     if existing:
-        raise HTTPException(status_code=409, detail="An account already exists. Use the standard administrator workflow.")
+        raise HTTPException(status_code=409, detail={"message": "An account already exists. Use the standard administrator workflow.", "field_errors": {"email": "An account already exists for this email address."}})
     user = User(email=payload.email.lower(), name=payload.name.strip(), password_hash=passwords.hash(payload.password), role="admin")
     session.add(user)
     await session.commit()
@@ -493,7 +505,7 @@ async def list_users(session: AsyncSession = Depends(db), _user: User = Depends(
 async def create_user(payload: AnalystCreateRequest, session: AsyncSession = Depends(db), _user: User = Depends(requires("admin"))):
     existing = await session.scalar(select(User.id).where(User.email == payload.email.lower()))
     if existing:
-        raise HTTPException(status_code=409, detail="An account already exists for this email address.")
+        raise HTTPException(status_code=409, detail={"message": "An account already exists for this email address.", "field_errors": {"email": "An account already exists for this email address."}})
     user = User(email=payload.email.lower(), name=" ".join(payload.name.split()), password_hash=passwords.hash(payload.password), role=payload.role, is_active=True)
     session.add(user)
     await session.commit()
@@ -654,6 +666,8 @@ async def allocation_case(score_id: int, session: AsyncSession = Depends(db), _u
 @app.post("/api/v1/audits/run", tags=["Audit workflow"])
 async def run_audit(session: AsyncSession = Depends(db), user: User = Depends(requires("admin"))):
     projects = list((await session.scalars(select(Project))).all())
+    if not projects:
+        raise HTTPException(status_code=422, detail="No project records are available. Import a valid project CSV before running the evidence audit.")
     digest = sha256("|".join(f"{project.project_code}:{project.actual_expenditure}" for project in projects).encode()).hexdigest()
     run = AuditRun(run_code=f"AUD-{datetime.now(timezone.utc):%Y%m%d%H%M%S}", algorithm_version="explainable-rules-v2", source_digest=digest, configuration={"cost_threshold": 55, "stalled_days": 90}, total_projects=len(projects), total_alerts=0, status="running", initiated_by_id=user.id)
     session.add(run); await session.flush()

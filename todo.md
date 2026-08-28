@@ -89,3 +89,6 @@
 - [x] Support the supplied official allocated-limit CSV column structure in the allocation import parser and frontend validation.
 - [x] Implement and surface the official allocation-context model immediately after a successful authorised source import.
 - [ ] Verify the allocation-context model appears immediately after an authorised official-source import in the deployed browser.
+- [ ] Fix user-supplied CSV validation so required columns and row-level issues are explained clearly before import.
+- [ ] Ensure the audit action runs against imported user data and shows an explicit result or error state.
+- [ ] Render login/bootstrap ID and password errors directly below the corresponding form fields.

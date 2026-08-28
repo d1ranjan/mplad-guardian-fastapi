@@ -55,3 +55,22 @@ def test_text_overlap_identifies_related_project_language_without_claiming_a_dup
     overlap = text_overlap("Construct a covered concrete storm-water drainage channel near Market Road", "Build a cement concrete drainage pathway for storm water beside Market Road")
     assert overlap >= 0.35
     assert text_overlap("solar lights", "health facility") == 0.0
+
+
+def test_project_csv_normalises_common_export_headers():
+    header = "Project ID,Project Name,Project Category,State Name,District Name,Location,Implementing Agency,Financial Year,Sanction Amount,Expenditure,Sanction Date,Completion Date,Update Date,Progress,Status\n"
+    row = "MPL-ALIAS-001,Community water point,Water,Odisha,Cuttack,Naraj,Works Co,2025-26,100000,20000,2025-04-01T00:00:00Z,2025-06-01T00:00:00Z,2025-04-15T00:00:00Z,20,ongoing\n"
+    rows, issues = parse_project_csv((header + row).encode())
+    assert rows[0]["project_code"] == "MPL-ALIAS-001"
+    assert rows[0]["vendor_name"] == "Works Co"
+    assert issues == []
+
+
+def test_project_csv_missing_headers_include_received_headers_for_ui_feedback():
+    try:
+        parse_project_csv(b"Project ID,Project Name\nMPL-001,Incomplete\n")
+    except Exception as error:
+        assert error.detail["missing_headers"]
+        assert error.detail["received_headers"] == ["Project ID", "Project Name"]
+    else:
+        raise AssertionError("Expected a structured missing-header error")
