@@ -2,7 +2,7 @@ import os
 os.environ.setdefault("POSTGRESQL_URL", "postgresql+asyncpg://postgres:postgres@localhost/postgres")
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-production")
 from fastapi.testclient import TestClient
-from app.main import app, parse_official_allocation_csv, parse_project_csv, text_overlap
+from app.main import app, cors_allowlist, parse_official_allocation_csv, parse_project_csv, text_overlap
 
 def test_health_and_docs_are_exposed():
     client = TestClient(app)
@@ -14,6 +14,15 @@ def test_health_and_docs_are_exposed():
     assert "/api/v1/users" in openapi["paths"]
     assert "/api/v1/audits/run" in openapi["paths"]
     assert "/api/v1/allocations" in openapi["paths"]
+
+
+def test_cors_allows_both_owned_frontend_origins_without_permitting_unknown_origins():
+    client = TestClient(app)
+    for origin in ("https://d1ranjan.github.io", "https://mpladguard-dtzanqrn.manus.space"):
+        response = client.options("/api/v1/auth/login", headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == origin
+    assert "https://not-owned.example" not in cors_allowlist("https://d1ranjan.github.io")
 
 
 def test_csv_parser_reports_duplicate_project_codes_without_accepting_them():

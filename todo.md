@@ -82,3 +82,4 @@
 - [x] Replace the approximate Quark-inspired frontend with a screen-by-screen faithful adaptation of the supplied Quark reference while retaining all MPLAD Guardian workflows.
 - [x] Verify the corrected reference-aligned interface at desktop and mobile widths, then publish the GitHub Pages revision.
 - [x] Convert imports, alerts, alert cases, allocation context, allocation cases, models, and analyst management to explicit Quark-aligned workflow compositions.
+- [ ] Diagnose and restore the Render API deployment so authenticated frontend workflows no longer fail with a browser fetch error.

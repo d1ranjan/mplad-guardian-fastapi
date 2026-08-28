@@ -35,6 +35,19 @@ database_url = settings.postgresql_url.replace("postgresql://", "postgresql+asyn
 engine = create_async_engine(database_url, pool_pre_ping=True, pool_size=5, max_overflow=5)
 Session = async_sessionmaker(engine, expire_on_commit=False)
 
+# The public static frontend is intentionally available through GitHub Pages and
+# the managed project domain. Keep this an exact-origin allow-list; do not use
+# a wildcard because cross-site requests include credentials.
+OWNED_FRONTEND_ORIGINS = (
+    "https://d1ranjan.github.io",
+    "https://mpladguard-dtzanqrn.manus.space",
+)
+
+
+def cors_allowlist(configured_origins: str) -> list[str]:
+    configured = [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+    return list(dict.fromkeys([*configured, *OWNED_FRONTEND_ORIGINS]))
+
 
 class Base(DeclarativeBase):
     pass
@@ -412,7 +425,7 @@ def requires(*roles: str):
 
 
 app = FastAPI(title="MPLAD Guardian API", version="2.0.0", description="Production audit intelligence API. Scores are review context, not findings of wrongdoing.", openapi_url="/api/v1/openapi.json", docs_url="/docs", redoc_url="/redoc")
-app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")], allow_credentials=True, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=cors_allowlist(settings.cors_origins), allow_credentials=True, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
 
 
 @app.get("/api/v1/health", tags=["Operations"])
